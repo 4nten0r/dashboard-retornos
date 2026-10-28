@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard – Indicadores de Entregas</title>
+<style>
+  :root{
+    --bg:#0b1220; --bg2:#0e1729; --card:rgba(255,255,255,.045); --card2:rgba(255,255,255,.07);
+    --border:rgba(255,255,255,.09); --border2:rgba(255,255,255,.16);
+    --text:#e7eefc; --muted:#8ea2c4; --muted2:#5b6e8f;
+    --green:#22c55e; --green-d:#16a34a; --red:#ef4444; --amber:#f59e0b; --blue:#38bdf8; --violet:#a78bfa;
+    --grad:linear-gradient(135deg,#38bdf8 0%,#a78bfa 100%);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--text);
+       min-height:100vh;font-size:15px;-webkit-font-smoothing:antialiased}
+  #bg3d{position:fixed;inset:0;z-index:0;opacity:.6;pointer-events:none}
+  .wrap{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:26px 22px 40px}
+  h1,h2,h3{font-weight:700;letter-spacing:-.01em}
+  .hero{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;margin-bottom:18px}
+  .hero .t h1{font-size:30px;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .hero .t .sub{color:var(--muted);font-size:13.5px;margin-top:4px;max-width:640px;line-height:1.5}
+  .hero .actions{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px}
+  .btn{display:inline-flex;align-items:center;gap:7px;background:var(--card2);color:var(--text);
+       border:1px solid var(--border2);border-radius:10px;padding:9px 14px;font-size:13.5px;font-weight:600;
+       cursor:pointer;transition:.18s;user-select:none;white-space:nowrap}
+  .btn:hover{background:rgba(255,255,255,.12);transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+  .btn.primary{background:linear-gradient(135deg,#2563eb,#38bdf8);border-color:#3b82f6;color:#fff}
+  .btn.primary:hover{filter:brightness(1.1)}
+  .btn.danger{border-color:rgba(239,68,68,.5);color:#fca5a5}
+  .btn.danger:hover{background:rgba(239,68,68,.15)}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+  .btn .ic{font-size:15px}
+  @keyframes spin{100%{transform:rotate(360deg)}}
+  .spin{display:inline-block;animation:spin 1s linear infinite}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;position:relative}
+  .panel h2{font-size:15.5px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .panel h2 .count{font-size:12px;color:var(--muted);font-weight:600;background:var(--card2);
+       border:1px solid var(--border);padding:2px 9px;border-radius:999px}
+  .panel h2 .spacer{margin-left:auto}
+</style>
+<style>
+  .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px;
+       background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px}
+  .filters label{font-size:12px;color:var(--muted);font-weight:600;display:flex;flex-direction:column;gap:5px}
+  .filters input,.filters select{background:#0d1526;border:1px solid var(--border2);color:var(--text);
+       border-radius:9px;padding:8px 11px;font-size:13.5px;min-width:130px;font-family:inherit}
+  .filters input:focus,.filters select:focus{outline:none;border-color:var(--blue)}
+  .filters input[type=date]{color-scheme:dark}
+  .filters .grow{flex:1;min-width:200px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px;margin-bottom:18px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 18px;
+       position:relative;overflow:hidden;transition:.2s}
+  .card:hover{border-color:var(--border2);transform:translateY(-2px)}
+  .card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent,var(--blue));opacity:.85}
+  .card .label{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px}
+  .card .value{font-size:29px;font-weight:800;line-height:1.05;color:var(--accent,var(--text))}
+  .card .sub{margin-top:7px;font-size:12.5px;color:var(--muted)}
+  .card.ok{--accent:var(--green)} .card.bad{--accent:var(--red)}
+  .card.warn{--accent:var(--amber)} .card.neutral{--accent:var(--blue)} .card.violet{--accent:var(--violet)}
+  .grid-charts{display:grid;grid-template-columns:380px 1fr;gap:14px;margin-bottom:18px}
+  @media(max-width:980px){.grid-charts{grid-template-columns:1fr}}
+  .chart-box{height:280px;position:relative}
+  .chart-box2{height:280px;position:relative}
+  .donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+  .donut-center .big{font-size:30px;font-weight:800}
+  .donut-center .small{font-size:12px;color:var(--muted);margin-top:2px}
+  .legend{list-style:none;margin-top:14px;display:grid;gap:8px}
+  .legend li{display:flex;align-items:center;gap:9px;font-size:13.5px}
+  .legend .dot{width:11px;height:11px;border-radius:3px;flex:none}
+  .legend .pct{margin-left:auto;font-weight:700}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{position:sticky;top:0;background:#101b31;text-align:left;font-size:11px;text-transform:uppercase;
+     letter-spacing:.05em;color:var(--muted);padding:9px 10px;border-bottom:1px solid var(--border2);z-index:2;white-space:nowrap}
+  td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+  tr:hover td{background:rgba(255,255,255,.03)}
+  .tbl-wrap{max-height:420px;overflow:auto;border-radius:10px;border:1px solid var(--border)}
+  .tbl-wrap::-webkit-scrollbar{width:9px;height:9px}
+  .tbl-wrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:9px}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap}
+  .tag.g{background:rgba(34,197,94,.14);color:#4ade80}
+  .tag.r{background:rgba(239,68,68,.14);color:#f87171}
+  .tag.a{background:rgba(245,158,11,.14);color:#fbbf24}
+  .tag.b{background:rgba(56,189,248,.14);color:#7dd3fc}
+  .tag.v{background:rgba(167,139,250,.14);color:#c4b5fd}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  .dropzone{border:2px dashed rgba(255,255,255,.18);border-radius:14px;padding:26px;text-align:center;
+       color:var(--muted);font-size:14px;cursor:pointer;transition:.2s;margin-bottom:18px;background:var(--card)}
+  .dropzone:hover,.dropzone.over{border-color:var(--blue);color:var(--text);background:rgba(56,189,248,.06)}
+  .dropzone b{color:var(--blue)}
+  .toast{position:fixed;bottom:22px;right:22px;z-index:50;display:grid;gap:8px;max-width:360px}
+  .toast div{background:#132038;border:1px solid var(--border2);border-left:4px solid var(--blue);
+       border-radius:10px;padding:12px 16px;font-size:13.5px;box-shadow:0 8px 30px rgba(0,0,0,.45);animation:tin .25s ease}
+  .toast div.err{border-left-color:var(--red)} .toast div.ok{border-left-color:var(--green)}
+  @keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .foot{margin-top:18px;font-size:12px;color:var(--muted2);line-height:1.6}
+  .imports{font-size:13px}
+</style>
+</head>
+<body>
+<div id="bg3d"></div>
+<div class="wrap">
+  <div class="hero">
+    <div class="t">
+      <h1>Indicadores de Entregas</h1>
+      <div class="sub" id="subInfo">Carregando…</div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="btnSyncSheets" title="Sincroniza os dados mais recentes diretamente do Google Sheets">🔄 Sincronizar Google Sheets</button>
+      <button class="btn" id="btnFoto" title="Exporta o dashboard atual (com filtros aplicados) como PNG em alta resolução e abre a janela de impressão para PDF">📷 Foto do Dashboard (PNG/PDF)</button>
+      <button class="btn" id="btnExportV" title="Baixa as viagens filtradas em CSV">⬇ Viagens (CSV)</button>
+      <button class="btn" id="btnExportN" title="Baixa as notas filtradas em CSV">⬇ Notas (CSV)</button>
+      <button class="btn danger" id="btnReset" title="Apaga todo o histórico salvo e volta à base inicial">🗑 Zerar histórico</button>
+    </div>
+  </div>
+
+  <div class="dropzone" id="dropzone">
+    📥 <b>Sincronização em nuvem ativa</b> (Google Sheets) ou <b>arraste aqui</b> planilhas manuais (.xlsx).
+    <span class="muted">Os dados antigos são sempre preservados — os novos são somados e atualizados por NF/viagem.</span>
+    <input type="file" id="fileInput" class="hidden" multiple accept=".xlsx,.xls" style="display:none">
+  </div>
+
+  <div class="filters" id="filters">
+    <label>Filial
+      <select id="fFilial"><option value="">Todas</option></select>
+    </label>
+    <label>Data
+      <select id="fData"><option value="">Todas</option></select>
+    </label>
+    <label>Motorista
+      <select id="fMotorista"><option value="">Todos</option></select>
+    </label>
+    <label>Região
+      <select id="fRegiao"><option value="">Todas</option></select>
+    </label>
+    <label>Ocorrência
+      <select id="fOcorrencia"><option value="">Todas</option></select>
+    </label>
+    <label class="grow">Buscar NF / Cliente / Destinatário
+      <input type="search" id="fBusca" placeholder="Digite para filtrar…" style="width:100%">
+    </label>
+    <label>&nbsp;
+      <button class="btn" id="btnClear">✖ Limpar filtros</button>
+    </label>
+  </div>
+
+  <div class="cards" id="cards">
+    <div class="card neutral"><div class="label">Total de entregas</div><div class="value" id="kEntregas">–</div><div class="sub" id="kEntregasSub"></div></div>
+    <div class="card violet"><div class="label">Volume total</div><div class="value" id="kVolumes">–</div><div class="sub" id="kVolumesSub"></div></div>
+    <div class="card ok"><div class="label">Entregas com sucesso</div><div class="value" id="kSucesso">–</div><div class="sub" id="kSucessoSub"></div></div>
+    <div class="card bad"><div class="label">Entregas sem sucesso</div><div class="value" id="kInsucesso">–</div><div class="sub" id="kInsucessoSub"></div></div>
+    <div class="card warn"><div class="label">Pendências ativas</div><div class="value" id="kPend">–</div><div class="sub" id="kPendSub"></div></div>
+    <div class="card neutral"><div class="label">Taxa de sucesso</div><div class="value" id="kTaxa">–</div><div class="sub" id="kTaxaSub"></div></div>
+  </div>
+
+  <div class="grid-charts">
+    <div class="panel">
+      <h2>Resultado das entregas</h2>
+      <div class="chart-box"><canvas id="donut"></canvas>
+        <div class="donut-center" id="donutCenter"><div class="big">–</div><div class="small">sucesso (finalizadas)</div></div>
+      </div>
+      <ul class="legend" id="donutLegend"></ul>
+    </div>
+    <div class="panel">
+      <h2>Entregas por dia <span class="count" id="countDias">–</span></h2>
+      <div class="chart-box2"><canvas id="bars"></canvas></div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script>
+'use strict';
+// ===================== ESTADO =====================
+const V_FIELDS = ['Data Entrega','Filial','Motorista','Nº Viagens','Setores','Ajudante','Veículo','Modelo Veículo','Entregas','Volumes','Sucessos','Insucessos'];
+const N_FIELDS = ['NF','Solicitação','Pedido','Status','Peso','Valor NF','Minuta','Volumes','Cliente','Tipo Entrega','Cód Setor','Região','Filial','Filial de Entrega','Embarque','Data Prazo','Data Prazo Cliente','Motorista Últ. Viagem','Data Últ. Viagem','Nº Últ. Viagem','Motorista Ocorrência','Data Ocorrência','Ocorrência','Subocorrência','Obs Ocorrência','Data Registro Ocorr.','Data Primeira Bipagem','Data Bipagem Filial','Cód Destinatário','Cód Roteirizador','Destinatário','Cidade','Bairro','Endereço','Telefone','Subrota','Obs Entrega','CEP','Chave NF-e','Prazo Efetividade','Efetividade','Offset Efetividade','Status Num'];
+const DEFAULT_SEED = {"savedAt":"2026-10-22T18:50:44.058Z","fv":["Data Entrega","Filial","Motorista","Nº Viagens","Setores","Ajudante","Veículo","Modelo Veículo","Entregas","Volumes","Sucessos","Insucessos"],"fn":["NF","Solicitação","Pedido","Status","Peso","Valor NF","Minuta","Volumes","Cliente","Tipo Entrega","Cód Setor","Região","Filial","Filial de Entrega","Embarque","Data Prazo","Data Prazo Cliente","Motorista Últ. Viagem","Data Últ. Viagem","Nº Últ. Viagem","Motorista Ocorrência","Data Ocorrência","Ocorrência","Subocorrência","Obs Ocorrência","Data Registro Ocorr.","Data Primeira Bipagem","Data Bipagem Filial","Cód Destinatário","Cód Roteirizador","Destinatário","Cidade","Bairro","Endereço","Telefone","Subrota","Obs Entrega","CEP","Chave NF-e","Prazo Efetividade","Efetividade","Offset Efetividade","Status Num"],"v":[["2026-10-21","MD RIBEIRAO PRETO","ADRIANO PERES","1","0","","UPD-6J20","FIORINO",64,83,9,0],["2026-10-21","MD RIBEIRAO PRETO","ANDERSON VICENTE DA SILVA","1","209 | 213","","EAH-1G77","FIORINO",69,90,25,0],["2026-10-21","MD RIBEIRAO PRETO","ANTONIO MARCOS SIQUEIRA MENDES","1","683","","Beu-9a20","FIORINO",66,87,10,0],["2026-10-21","MD RIBEIRAO PRETO","DAVI JOSE GONÇALVES SANTOS","1","213","","FSV-0D40","FIORINO",53,62,9,1],["2026-10-21","MD RIBEIRAO PRETO","DINO CESAR MENDES DA","1","0","","DXR-1H31","FIORINO",31,34,5,0],["2026-10-21","MD RIBEIRAO PRETO","EDINALDO DA COSTA SANTOS","1","0","","OQW-8B20","SAVEIRO",62,71,9,0],["2026-10-21","MD RIBEIRAO PRETO","EDSON LUIZ AMARAL DE SOUZA MATTOS","1","0","","PZA-2363","KANGOO",11,13,3,0],["2026-10-21","MD RIBEIRAO PRETO","EDVALDO DIAS BORBOREMA","1","0","","FFJ-4G40","MONTANA",75,96,11,0],["2026-10-21","MD RIBEIRAO PRETO","ELAINE CRISTINA DOS SANTOS MIAN","1","0","","FQM-5G59","FIORINO",59,68,25,0],["2026-10-21","MD RIBEIRAO PRETO","EMMANUEL DE OLIVEIRA FIDELIS","1","0","","PXU-2G91","STRADA",75,87,1,0],["2026-10-21","MD RIBEIRAO PRETO","FRANCISCO ROBERTO DE OLIVEIRA","2","0","","FHU-3G50","STRADA",79,88,33,0],["2026-10-21","MD RIBEIRAO PRETO","FRANCO ANDRE OTANI","1","0","","FWV-0F40","SAVEIRO",45,48,3,1],["2026-10-21","MD RIBEIRAO PRETO","GABRIEL STUART GODOI CARDOSO","1","0 | 213","","GFO-1B31","STRADA",71,77,35,0],["2026-10-21","MD RIBEIRAO PRETO","GABRIELLA RODRIGUES LOPES","1","0","","QWY-7A01","STRADA",25,27,6,0],["2026-10-21","MD RIBEIRAO PRETO","GENIVALDO DA COSTA SANTOS","1","0","","OPU-8C24","STRADA",40,49,5,0],["2026-10-21","MD RIBEIRAO PRETO","GUILHERME FERREIRA","1","0","","HJA-9F90","STRADA",36,46,6,0],["2026-10-21","MD RIBEIRAO PRETO","GUILHERME FERREIRA JUNIOR","1","211 | 683","","Stv-9b97","SAVEIRO",46,61,19,0],["2026-10-21","MD RIBEIRAO PRETO","HOMERO DA SILVEIRA","1","0","","tix-8j87","SAVEIRO",3,32,0,0],["2026-10-21","MD RIBEIRAO PRETO","INGRID AUGUSTA DA SILVA TORO","1","0","","FGZ-7I93","FIORINO",46,64,5,1],["2026-10-21","MD RIBEIRAO PRETO","ISAIAS FERNANDES CARDOSO","1","213","","GFO-1B31","STRADA",78,93,33,0],["2026-10-21","MD RIBEIRAO PRETO","JOSE APARECIDO SOARES DE SOUZA JUNIOR","1","207 | 211 | 213","","URI-2J00","KANGOO",34,37,5,1],["2026-10-21","MD RIBEIRAO PRETO","LUIZ EDUARDO DE SOUZA","1","0","","OWZ-6D18","FIORINO",58,78,1,0],["2026-10-21","MD RIBEIRAO PRETO","MARCELO PAULINO","1","0","","GBL-6b27","FIORINO",52,68,5,0],["2026-10-21","MD RIBEIRAO PRETO","MARCELO PERACINI","1","0","","GDT-9I97","STRADA",48,73,7,0],["2026-10-21","MD RIBEIRAO PRETO","MATHEUS SILVA HILARIO","1","0","","GCH-2A11","FIORINO",62,77,16,0],["2026-10-21","MD RIBEIRAO PRETO","MURILO PEREIRA DE SOUZA","1","0","","FAS-6549","DOBLÔ",65,80,16,0],["2026-10-21","MD RIBEIRAO PRETO","OTAVIO AUGUSTO BARBOSA LEITE","1","0","","OPA-5B19","FIORINO",55,67,13,0],["2026-10-21","MD RIBEIRAO PRETO","OTAVIO LUIZ VIEIRA DIAS","1","0","","RFT-4F48","FIORINO",76,92,13,1],["2026-10-21","MD RIBEIRAO PRETO","PEDRO DOS SANTOS BARROS JUNIOR","1","0","","fqt-4h08","FIORINO",64,76,0,0],["2026-10-21","MD RIBEIRAO PRETO","RAFAEL DA SILVA OLIVEIRA","1","0","","ELT-7G72","FIORINO",20,23,4,0],["2026-10-21","MD RIBEIRAO PRETO","ROBERTO DOS SANTOS DE LUCAS JUNIOR","1","213","","QXJ-6H92","FIORINO",65,70,22,0],["2026-10-21","MD RIBEIRAO PRETO","WELLINGTON LUIZ MOREIRA DA COSTA","1","683","","ENO-1J13","FIORINO",53,67,28,0],["2026-10-21","MD RIBEIRAO PRETO","WILLIAM DE CASTRO","1","0","","RVL-4D56","FIORINO",47,53,8,0]],"n":[["1132520","0265590108","444470114","Tentativa de Entrega","1.279","106.86","9904257","1","AVON NATURA MPA CABREUVA","21 : RN","213","ARARAS","SP RIBEIRAO PRETO","SP RIBEIRAO PRETO","2026-10-19","2026-10-21","2026-10-21","ISAIAS FERNANDES CARDOSO","2026-10-21","1","ISAIAS FERNANDES CARDOSO","2026-10-21","2A TENTATIVA DE ENTREGA","","(FINALIZACAO MOBILE)","2026-10-21","2026-10-20","2026-10-20","377287067","19517226","Maria Do Socorro","SP-ARARAS","JARDIM UNIVERSI","CAMILLE FLAMMARION,281","19982467444","034","ZVON","13607308","35261071673990005136550070011325201484699750","2026-10-21","Dentro do Prazo","0","4"],["132111","0","52428628","Tentativa de Entrega","0.42","210.69","2026101933","1","MANDAE HUB","01 : ENTREGA NORMAL","213","RIO CLARO","SP RIBEIRAO PRETO","SP RIBEIRAO PRETO","2026-10-19","2026-10-21","2026-10-21","DAVI JOSE GONÇALVES SANTOS","2026-10-21","1","DAVI JOSE GONÇALVES SANTOS","2026-10-21","TENTATIVA DE ENTREGA","","(FINALIZACAO MOBILE)","2026-10-21","2026-10-19","2026-10-21","0","28554945","Flávia Roberta Vicentim Casari","Rio Claro","Parque Universitário","Rua 17, 3050 - Avenidas 36/38","19997522498","","NFE","13504361","35261028156908000108550010001321111595165180","2026-10-21","Dentro do Prazo","0","4"],["523631","0","52380008","Tentativa de Entrega","1.15","258.5","2026101592","1","MANDAE HUB","01 : ENTREGA NORMAL","683","MOCOCA","SP RIBEIRAO PRETO","SP RIBEIRAO PRETO","2026-10-19","2026-10-21","2026-10-21","GUILHERME FERREIRA JUNIOR","2026-10-21","1","GUILHERME FERREIRA JUNIOR","2026-10-21","TENTATIVA DE ENTREGA","","(FINALIZACAO MOBILE)","2026-10-21","2026-10-19","2026-10-20","0","26611426","Angela Maria Candido","Mococa","Jardim Nova Mococa","Rua Sergipe, 285 - Casa","19991533012","","NFE","13731320","35261032952310000100550010005236311418944682","2026-10-21","Dentro do Prazo","0","4"],["46565219","0265492056","905647106","Tentativa de Entrega","1.919","554.32","9903957","1","NATURA - NASP","01 : ENTREGA NORMAL","0","RIBEIRAO PRETO","SP RIBEIRAO PRETO","SP RIBEIRAO PRETO","2026-10-19","2026-10-21","2026-10-21","FRANCO ANDRE OTANI","2026-10-21","1","FRANCO ANDRE OTANI","2026-10-21","2A TENTATIVA DE ENTREGA","","(FINALIZACAO MOBILE)","2026-10-21","2026-10-20","2026-10-20","420782494","27790750","CLARICE SILVESTRE DA SILVA","RIBEIRAO PRETO","JARDIM ROBERTO","R DOMINGOS FAVERO,344","16994262367","003","ZVCS","14098240","35261071673990003940550010465652191567952253","2026-10-21","Dentro do Prazo","0","4"],["35528166","","186823174","Tentativa de Entrega","1","168.79","1065330","1","PRIVALIA EXTREMA","01 : ENTREGA NORMAL","213","ARARAS","SP RIBEIRAO PRETO","SP RIBEIRAO PRETO","2026-10-19","2026-10-21","2026-10-23","ISAIAS FERNANDES CARDOSO","2026-10-21","1","ISAIAS FERNANDES CARDOSO","2026-10-21","TENTATIVA DE ENTREGA","","(FINALIZACAO MOBILE)","2026-10-21","2026-10-19","2026-10-21","0","28529507","VERIDIANA FURLAM","ARARAS","JARDIM BELVEDERE","VITAL BRASIL  295 Advocacia","19993507752","","","13601180","31261010464223000759550020355281661264187999","2026-10-21","Dentro do Prazo","0","4"],["21128675","0263035923","896090701","Coleta Solicitada","3.868","188.64","9823665","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2036","REGIAO 21 S.PAULO U - RISCO","SP CARAPICUIBA","SP CARAPICUIBA","2026-09-15","2026-10-21","2026-09-19","ROUTER - CAR","2026-10-21","4","RICHARD DA SILVA ROCHA","2026-10-14","TRANSPORTES SOLICITOU COLETA A DEST. EM","SOLICITACAO DE COLETA","","2026-10-14","2026-09-16","2026-09-16","1743554","27604435","IRAIDE RIBEIRO DA SILVA","SP-SAO PAULO","JARDIM DO TIRO","RUA RUI DE MORAIS APOCALIPSE,568","11998564402","052","","2842260","35260971673990005136550010211286751309489462","2026-09-22","Dentro do Prazo","5","8"],["21509439","0264936838","903337985","Reentrega Solicitada","1.424","217.36","9886086","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2036","REGIAO 21 S.PAULO U - RISCO","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-09","2026-10-21","2026-10-14","ROUTER - CAR","2026-10-21","43","DIAS ENTREGADORA","2026-10-20","SOLICITACAO DE REENTREGA","","","2026-10-20","2026-10-10","2026-10-10","13118269","28443474","CL-UDIA RIBEIRO DE SOUZA CARMO","SP-SAO PAULO","VILA NOVA PARAD","MONTE AZUL PAULISTA,675","11967813440","054","ZVCS","2883050","35261071673990005136550010215094391558249814","2026-10-14","Dentro do Prazo","0","6"],["21545175","0265130562","904223716","Aguardando Expedição","0.646","212.79","9891050","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2032","JANDIRA","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-13","2026-10-21","2026-10-15","ROUTER - CAR","2026-10-21","21","DIAS ENTREGADORA","2026-10-20","SOLICITACAO DE REENTREGA","","","2026-10-20","2026-10-14","2026-10-14","84012820","27797945","ALINE DOS SANTOS ROCHA","SP-JANDIRA","JARDIM GABRIELA","MARQUES DE SANTO AMARO,8","1147076199","021","ZVCS","6626130","35261071673990005136550010215451751659420221","2026-10-15","Dentro do Prazo","0","0"],["21620065","0265480053","905595846","Aguardando Expedição","3.099","386.72","9903931","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-19","2026-10-21","2026-10-21","ROUTER - CAR","2026-10-21","12","","","","","","","2026-10-20","2026-10-20","4855310","28220913","EDELVITA RIBEIRO NASCIMENTO","SP-SAO PAULO","VILA JARAGUA","R MIGUEL PETRILLI,150","11969338380","012","ZVCS","5162250","35261071673990005136550010216200651286569986","2026-10-21","Dentro do Prazo","0","0"],["21620173","0265498440","905676808","Tentativa de Entrega","0.819","90.73","9903931","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2025","SANTANA DO PARNAIBA","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-19","2026-10-21","2026-10-21","ROUTER - CAR","2026-10-21","18","TIAGO GALANTE","2026-10-20","TENTATIVA DE ENTREGA","1.DEST. AUSENTE","","2026-10-20","2026-10-20","2026-10-20","226532356","28544768","ELIANA LOPES DA CUNHA","SP-SANTANA DE PARNAIBA","COLINAS DA ANHA","AV ALDO BONADEI,115","11972237331","018","ZVCS","6537025","35261071673990005136550010216201731642485021","2026-10-21","Dentro do Prazo","0","4"],["21620368","0265482147","905604052","Aguardando Expedição","0.459","145.05","9903931","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2028","CARAPICUIBA","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-19","2026-10-21","2026-10-21","ROUTER - CAR","2026-10-21","33","","","","","","","2026-10-20","2026-10-20","250145413","27533474","ROSENEIDE NUNES DE SOUSA","SP-CARAPICUIBA","PARQUE ROSEIRA","DAS ACACIAS,152","11999617930","033","ZVCS","6385023","35261071673990005136550010216203681979575489","2026-10-21","Dentro do Prazo","0","0"],["21623723","0265536311","905846036","Aguardando Expedição","0.355","131.11","9904199","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-19","2026-10-21","2026-10-21","ROUTER - CAR","2026-10-21","12","","","","","","","2026-10-20","2026-10-20","72927194","27499889","EDILEUZA NOBERTO LOPES","SP-SAO PAULO","JARDIM MUTINGA","BELO JARDIM,438","11997581149","012","ZVCS","5159200","35261071673990005136550010216237231117982357","2026-10-21","Dentro do Prazo","0","0"],["21626554","0265544590","905883759","Aguardando Expedição","0.622","174.26","9904625","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-19","2026-10-21","2026-10-21","ROUTER - CAR","2026-10-21","12","","","","","","","2026-10-20","2026-10-20","465416047","27818838","DANILO CAMARGO","SP-SAO PAULO","VILA JARAGUA","EST TURISTICA DO JARAGUA,732","11994500715","012","ZVCS","5161000","35261071673990005136550010216265541882178712","2026-10-21","Dentro do Prazo","0","0"],["21626576","0265413540","905361648","Aguardando Expedição","1.867","213.79","9904625","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2025","SANTANA DO PARNAIBA","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-19","2026-10-21","2026-10-21","ROUTER - CAR","2026-10-21","44","","","","","","","2026-10-20","2026-10-20","275979660","27504473","ESTEFANY SILVA MALANGI","SP-SANTANA DE PARNAIBA","PARQUE SINAI","R DAS GARDENIAS,3","11963229737","043","ZVCS","6532375","35261071673990005136550010216265761649924706","2026-10-21","Dentro do Prazo","0","0"],["21614035","0265477926","905597791","Coleta Solicitada","3.306","194.14","9902080","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2095","REGIAO 18 S.PAULO R","SP GUARULHOS","SP GUARULHOS","2026-10-17","2026-10-21","2026-10-20","ELANGELA ESTEVAM","2026-10-21","1","ELANGELA ESTEVAM","2026-10-21","TENTATIVA DE COLETA","","","2026-10-21","2026-10-17","2026-10-17","298050536","27566227","EUNICE ROSA SOUZA","SP-SAO PAULO","VILA RE","AV HERMILO ALVES,746","11980439628","028","ZVCS","3668000","35261071673990005136550010216140351626588987","2026-10-20","Dentro do Prazo","1","8"],["21620612","0265513708","905732014","Tentativa de Entrega","1.296","107.97","9903976","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2088","REGIAO 19 S.PAULO S","SP GUARULHOS","SP GUARULHOS","2026-10-19","2026-10-21","2026-10-21","FELIPE GOMES DA SILVA","2026-10-21","1","FELIPE GOMES DA SILVA","2026-10-21","TENTATIVA DE ENTREGA","","","2026-10-21","2026-10-20","2026-10-20","341319953","27636711","ELIANA DE ALMEIDA VIANA","SP-SAO PAULO","JARDIM FILHOS D","TV IGARAPE PRIMAVERA,12","11959356672","026","ZVCS","2325090","35261071673990005136550010216206121783261385","2026-10-21","Dentro do Prazo","0","4"],["21630070","0265595399","906139281","Tentativa de Entrega","2.633","318.22","9905296","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2090","GUARULHOS A","SP GUARULHOS","SP GUARULHOS","2026-10-19","2026-10-21","2026-10-21","JOAO DE OLIVEIRA","2026-10-21","1","JOAO DE OLIVEIRA","2026-10-21","FENOMENOS DA NATUREZA","","","2026-10-21","2026-10-20","2026-10-20","296899011","27478581","ANA LUCIA CRUZ","SP-GUARULHOS","JARDIM GUMERCIN","R ARTURO FOGOSO NIEVES,147","11993580215","014","ZVCS","7090090","35261071673990005136550010216300701374156067","2026-10-21","Dentro do Prazo","0","4"],["21627975","0265592953","212287876","Tentativa de Entrega","0.368","103.83","9904783","1","AVON NATURA MPA CABREUVA","21 : RN","2078","MAUA","SP SAO MATEUS","SP SAO MATEUS","2026-10-19","2026-10-21","2026-10-21","ROUTER - SMA","2026-10-21","53","MIRIAM DA LUZ ALVES","2026-10-20","TENTATIVA DE ENTREGA","","","2026-10-20","2026-10-20","2026-10-20","386115273","28550175","Taynan Soares Neves","MAUA","JARDIM ZAIRA","LUIS MARCOLINO,181","11964205736","032","ZVAE","9320680","35261071673990005136550010216279751504870507","2026-10-21","Dentro do Prazo","0","4"],["21623030","0265568907","906007153","Tentativa de Entrega","0.994","209.72","9904196","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2053","REGIAO 10 S.PAULO J (2)","SP TABOAO DA SERRA","SP TABOAO DA SERRA","2026-10-19","2026-10-21","2026-10-21","WELLINGTON LIMA QUEIROZ BARBOSA","2026-10-21","1","WELLINGTON LIMA QUEIROZ BARBOSA","2026-10-21","QUEBRA DE VEICULO","","","2026-10-21","2026-10-20","2026-10-20","334024757","27511142","VERA LUCIA DA SILVA","SP-SAO PAULO","PARAISOPOLIS","RUA RUA DO SIMBOLO,2","1137423109","031","ZVCS","5713570","35261071673990005136550010216230301790269425","2026-10-21","Dentro do Prazo","0","4"],["9509","0087232396","904458492","Aguardando Volumes","1.301","237.5","9907570","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2030","REGIAO 23 S.PAULO X","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-20","2026-10-20","1900-01-01","ROUTER - CAR","2026-10-21","13","","","","","","","","","321340574","27533426","MARINEIDE PRIMA DA S","SP-SAO PAULO","JD ANHANGUERA","R PEDRO JOSE DE LIMA,826","11913183443","013","** REFATURAMENTO **","5267174","35261071673990005136550100000095091885994044","1900-01-01","Atrasado","-46314","-1"],["21295663","0263879419","899382305","Reentrega Solicitada","1.317","213.23","9849586","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2036","REGIAO 21 S.PAULO U - RISCO","SP CARAPICUIBA","SP CARAPICUIBA","2026-09-25","2026-10-20","2026-09-29","ROUTER - CAR","2026-10-21","50","DIAS ENTREGADORA","2026-10-19","SOLICITACAO DE REENTREGA","","","2026-10-19","2026-09-26","2026-09-26","363896724","27577680","VITORIA MONTAGNOLLI CONDE","SP-SAO PAULO","JARDIM VITORIA","R SAPOPEMBA,23","11973914708","054","ZVCS","2859140","35260971673990005136550010212956631058773886","2026-09-29","Atrasado","-8","6"],["21398160","0264465908","901548945","Reentrega Solicitada","0.744","141.67","9868461","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2018","EMBU","SP TABOAO DA SERRA","SP TABOAO DA SERRA","2026-10-02","2026-10-20","2026-10-05","ROUTER - TABOAO","2026-10-21","19","RAFAEL SOARES SANTOS","2026-10-17","DESISTENCIA DA COLETA","DESTINATARIO DESISTIU DA COLETA","","2026-10-19","2026-10-03","2026-10-03","356947076","28343180","MARIA APARECIDA DE JESUS GABRIEL MA","SP-EMBU DAS ARTES","JARDIM SANTA EM","R JOSE LINHARES,106","11997156980","073","ZVCS","6823570","35261071673990005136550010213981601772260122","2026-10-05","Dentro do Prazo","2","6"],["21601346","0265410470","905342815","Tentativa de Entrega","2.107","153.06","9900363","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2094","ITAQUAQUECETUBA","SP GUARULHOS","SP GUARULHOS","2026-10-16","2026-10-19","2026-10-19","SAMUEL AZEVEDO DA SILVA","2026-10-21","1","SAMUEL AZEVEDO DA SILVA","2026-10-21","DIFICULDADES NA REGIAO DE ENTREGA","","","2026-10-21","2026-10-17","2026-10-17","14983796","28525964","NEIDE DOS SANTOS RAMOS","SP-ITAQUAQUECETUBA","JARDIM MARIA RO","R TIETA DO AGRESTE,111","11949493016","022","ZVCS","8582843","35261071673990005136550010216013461924824835","2026-10-19","Atrasado","-2","4"],["21580147","0265242991","904711118","Tentativa de Entrega","4.101","124.94","9896290","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2012","REGIAO 10 S.PAULO J (1)","SP TABOAO DA SERRA","SP TABOAO DA SERRA","2026-10-15","2026-10-19","2026-10-19","WELLINGTON LIMA QUEIROZ BARBOSA","2026-10-21","1","WELLINGTON LIMA QUEIROZ BARBOSA","2026-10-21","QUEBRA DE VEICULO","","","2026-10-21","2026-10-16","2026-10-16","469897716","28407687","NICOLY SOUZA LOPES","SP-SAO PAULO","VILA SUZANA","R DOUTOR LAERTE SETUBAL,294","11979619174","026","ZVCS","5665010","35261071673990005136550010215801471104879999","2026-10-19","Atrasado","-2","4"],["21581142","0265250919","904748032","Aguardando Expedição","3.373","317.4","9896283","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-15","2026-10-17","2026-10-17","ROUTER - CAR","2026-10-21","12","JANDICLEI DOS SANTOS","2026-10-18","TENTATIVA DE ENTREGA","1.DEST. AUSENTE","","2026-10-18","2026-10-16","2026-10-16","2871173","27478679","ROSELI APARECIDA DO PRADO RUSEW","SP-SAO PAULO","CIDADE D ABRIL","DOMENICO FERRARA,140","11963175568","012","ZVCS","5182270","35261071673990005136550010215811421720959488","2026-10-17","Atrasado","-4","0"],["21581147","0265319726","905003436","Aguardando Expedição","2.602","224.34","9896283","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-15","2026-10-17","2026-10-17","ROUTER - CAR","2026-10-21","12","JANDICLEI DOS SANTOS","2026-10-18","TENTATIVA DE ENTREGA","1.DEST. AUSENTE","","2026-10-18","2026-10-16","2026-10-16","452273110","28507690","ANDRE LUIS ALVES QUARESMA","SP-SAO PAULO","VILA AURORA","R OLIMPIO BARCELOS,274","11988581365","012","ZVCS","5186180","35261071673990005136550010215811471461804765","2026-10-17","Atrasado","-4","0"],["21581150","0265300524","904942532","Aguardando Expedição","2.777","151.24","9896283","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-15","2026-10-17","2026-10-17","ROUTER - CAR","2026-10-21","12","JANDICLEI DOS SANTOS","2026-10-18","TENTATIVA DE ENTREGA","1.DEST. AUSENTE","","2026-10-18","2026-10-16","2026-10-16","83663592","27700972","MARIA PRESOTO","SP-SAO PAULO","JARDIM IPANEMA","AV ALEXIOS JAFET,123","11963375096","012","ZVCS","5187010","35261071673990005136550010215811501958799106","2026-10-17","Atrasado","-4","0"],["21581151","0265241409","904704342","Aguardando Expedição","2.161","372.43","9896283","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-15","2026-10-17","2026-10-17","ROUTER - CAR","2026-10-21","12","","","","","","","2026-10-16","2026-10-16","78609240","28507664","MARIA ALEXANDRE","SP-SAO PAULO","VILA JARAGUA","VALENTINO CARDOSO,19","1139015713","012","ZVCS","5161100","35261071673990005136550010215811511408118340","2026-10-17","Atrasado","-4","0"],["21581153","0265308603","904860279","Aguardando Expedição","5.609","134.59","9896283","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-15","2026-10-17","2026-10-17","ROUTER - CAR","2026-10-21","12","","","","","","","2026-10-16","2026-10-16","243126271","28507596","GILMARA SANTANA DOS SANTOS","SP-SAO PAULO","JARDIM IPANEMA","ALEXIOS JAFET,1150","11998729458","012","ZVCS","5187010","35261071673990005136550010215811531399632525","2026-10-17","Atrasado","-4","0"],["21561048","0265216285","904593635","Aguardando Expedição","3.071","190.72","9893631","1","AVON NATURA MPA CABREUVA","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-14","2026-10-16","2026-10-16","ROUTER - CAR","2026-10-21","12","ALAN WILLIAN PIVA","2026-10-16","TENTATIVA DE ENTREGA","1.DEST. AUSENTE","","2026-10-16","2026-10-15","2026-10-15","79794645","27781876","THAMIRIS ARAUJO","SP-SAO PAULO","JARDIM IPANEMA","RUA GREGORIO TAGLE,301","11945688739","012","ZVCS","5187510","35261071673990005136550010215610481421248386","2026-10-16","Atrasado","-5","0"],["8670","0087228128","602088026","Aguardando Volumes","0.588","44.91","9891496","1","AVON NATURA MPA CABREUVA","21 : RN","183","RIO DE JANEIRO REG. TIJUCA","RJ DUQUE - RIO DE JANEIRO","RJ DUQUE - RIO DE JANEIRO","2026-10-13","2026-10-13","1900-01-01","ROUTER - DCX","2026-10-21","10","","","","","","","","","468601953","27689814","AndrT Felipe","RJ-RIO DE JANEIRO","PRACA DA BANDEI","DO MATOSO,42","86981720750","060","** REFATURAMENTO **","20270133","35261071673990005136550100000086701447398939","1900-01-01","Atrasado","-46314","-1"],["290718","0087231159","265608924","Coleta Solicitada","1.1","39.78","9904288","1","NATURA - MATIAS BARBOSA","32 : SNAC COLETA","243","RIO DE JANEIRO REG.P","RJ DUQUE - RIO DE JANEIRO","RJ DUQUE - RIO DE JANEIRO","2026-10-19","2026-10-21","2026-10-21","VLADIMIR FERNANDES DE LIMA","2026-10-21","1","VLADIMIR FERNANDES DE LIMA","2026-10-21","2A TENTATIVA DE COLETA","","","2026-10-21","","","19059809","28244836","SIMONE ALVES","RIO DE JANEIRO","CURICICA","R DA MEDITACAO,14","","072","ZCSC","22780460","31261071673990001904550030002907181662897657","1900-01-01","Atrasado","-46314","8"],["49682880","0264896440","902984949","Reentrega Solicitada","2.471","423.12","9885197","1","NATURA - MATIAS BARBOSA","01 : ENTREGA NORMAL","0","RIO DE JANEIRO REG CUFA","RJ DUQUE - RIO DE JANEIRO","RJ CUFA","2026-10-09","2026-10-21","2026-10-14","BRUNO ALMEIDA SILVA","2026-10-16","1","DIAS ENTREGADORA","2026-10-20","SOLICITACAO DE REENTREGA","","","2026-10-20","2026-10-10","2026-10-10","466775547","28438885","CONCEI¦+O MARIA DOS SANTOS DA SILVA","RJ-RIO DE JANEIRO","MADUREIRA","EST DO PORTELA,188","21976134535","099","ZVCS","21351051","31261071673990001904550010496828801701740002","2026-10-14","Atrasado","-2","6"],["49720632","0265112311","904151900","Tentativa de Entrega","2.178","291.82","9896307","1","NATURA - MATIAS BARBOSA","01 : ENTREGA NORMAL","243","RIO DE JANEIRO REG.P","RJ DUQUE - RIO DE JANEIRO","RJ DUQUE - RIO DE JANEIRO","2026-10-15","2026-10-21","2026-10-17","VLADIMIR FERNANDES DE LIMA","2026-10-21","1","VLADIMIR FERNANDES DE LIMA","2026-10-21","DIFICULDADES NA REGIAO DE ENTREGA","","","2026-10-21","2026-10-16","2026-10-16","303545690","27699931","PATRICK MOREIRA FONSECA","RJ-RIO DE JANEIRO","JACAREPAGUA","EST DE CAMORIM,1772","21999554346","072","ZVCS","22780070","31261071673990001904550010497206321419944341","2026-10-17","Dentro do Prazo","1","4"],["49739744","0265313996","904972339","Coletado","5.911","482.22","9902607","1","NATURA - MATIAS BARBOSA","01 : ENTREGA NORMAL","246","NOVA IGUACU CG","RJ DUQUE - RIO DE JANEIRO","RJ CAMPO GRANDE","2026-10-17","2026-10-21","2026-10-21","","","","","","","","","","2026-10-19","2026-10-19","89785100","27492320","CLAUDIA DE ANDRADE","RJ-NOVA IGUACU","ENG ROCHA FREIR","RUA VITORIA,28","2127699587","028","ZVCS","26291970","31261071673990001904550010497397441179877336","2026-10-21","Dentro do Prazo","0","26"],["49747504","0265174560","904403093","Tentativa de Entrega","13.138","1263.57","9904035","2","NATURA - MATIAS BARBOSA","01 : ENTREGA NORMAL","2693","RIO DE JANEIRO REG. PAVUNA","RJ DUQUE - RIO DE JANEIRO","RJ DUQUE - RIO DE JANEIRO","2026-10-19","2026-10-21","2026-10-21","LEONARDO LEAL DOS SANTOS DE OLIVEIRA","2026-10-21","1","LEONARDO LEAL DOS SANTOS DE OLIVEIRA","2026-10-21","TENTATIVA DE ENTREGA","","","2026-10-21","2026-10-20","2026-10-20","376070676","27465577","MARIA SEREJO","RJ-RIO DE JANEIRO","COSTA BARROS","R DA PAZ,19","21987879629","806","ZVCS","21531991","31261071673990001904550010497475041353958160","2026-10-21","Dentro do Prazo","0","4"],["3749629","0265411225","444469004","Tentativa de Entrega","0.509","83.83","9902931","1","NATURA - MATIAS BARBOSA","21 : RN","2704","GUAPIMIRIM","RJ DUQUE - RIO DE JANEIRO","RJ DUQUE - BAIXADA","2026-10-17","2026-10-20","2026-10-20","JOSE MARIO DE OLIVEIRA","2026-10-20","1","JOSE MARIO DE OLIVEIRA","2026-10-20","TENTATIVA DE ENTREGA","1.DEST. AUSENTE","","2026-10-20","2026-10-18","","474449327","28538868","Deise Vivas","GUAPIMIRIM","CENTRO","DOUTOR FELIPE THIAGO GOMES,209","21987047825","026","ZVON","25946217","31261071673990001904550070037496291082529224","2026-10-20","Atrasado","-1","4"],["49679942","0264654337","902353540","Reconhecimento Solicitado","1.61","76.11","9883819","1","NATURA - MATIAS BARBOSA","01 : ENTREGA NORMAL","2780","RIO DE JANEIRO 2780","RJ DUQUE - RIO DE JANEIRO","RJ DUQUE - RIO DE JANEIRO","2026-10-08","2026-10-20","2026-10-13","ALEXANDRE FURTADO LIMA","2026-10-21","2","ALEXANDRE FURTADO LIMA","2026-10-21","2a TENTATIVA DE RECONHECIMENTO","","","2026-10-21","2026-10-09","2026-10-09","158438299","28437457","MARINETE PINTO LOUREIRO","RJ-RIO DE JANEIRO","PIEDADE","SOUSA CERQUEIRA,60","21971874493","087","ZVCS","20751090","31261071673990001904550010496799421508300430","2026-10-13","Atrasado","-1","2"],["49729537","0265408941","599776626","Tentativa de Entrega","4.227","149.61","9899875","1","NATURA - MATIAS BARBOSA","21 : RN","238","NOVA IGUACU","RJ DUQUE - RIO DE JANEIRO","RJ DUQUE - BAIXADA","2026-10-16","2026-10-20","2026-10-20","ROUTER - DCX2","2026-10-21","527","RICARDO MARTINS DE LEMOS","2026-10-21","TENTATIVA DE ENTREGA","","","2026-10-21","2026-10-17","","172996562","28524566","Priscilla Vailantes","Nova Iguacu","Oliveira","R Mendes,192","21982239002","049","ZVEC","26030370","31261071673990001904550010497295371309555261","2026-10-20","Atrasado","-1","4"],["49738121","0265364112","905192771","Tentativa de Entrega","2.686","350.99","9901870","1","NATURA - MATIAS BARBOSA","01 : ENTREGA NORMAL","2701","DUQUE DE CAXIAS REG A","RJ DUQUE - RIO DE JANEIRO","RJ DUQUE - BAIXADA","2026-10-17","2026-10-20","2026-10-20","BRUNO SILVA DE LIMA","2026-10-21","1","BRUNO SILVA DE LIMA","2026-10-21","2A TENTATIVA DE ENTREGA","","","2026-10-21","2026-10-18","","239766130","28537094","ROSANE TEIXEIRA DA CRUZ","RJ-DUQUE DE CAXIAS","VILA SANTA ALIC","EST DA IGREJA VELHA,520","21966329424","022","ZVCS","25250310","31261071673990001904550010497381211289466274","2026-10-20","Atrasado","-1","4"],["49488609","0262768928","603951294","Reentrega Solicitada","0.261","41.44","9817273","1","NATURA - MATIAS BARBOSA","21 : RN","0","RIO DE JANEIRO REG CUFA","RJ DUQUE - RIO DE JANEIRO","RJ CUFA","2026-09-12","2026-10-16","2026-09-16","DANIEL FERREIRA RIBEIRO","2026-10-09","1","DIAS ENTREGADORA","2026-10-15","SOLICITACAO DE REENTREGA","","","2026-10-15","2026-09-14","2026-09-14","315841087","28069093","LASMIM M","Rio De Janeiro","Turiacu","R Silvio Tibirica,449","21984570217","015","ZVEC","21540200","31260971673990001904550010494886091683297772","2026-09-24","Dentro do Prazo","2","6"],["49617526","0264141193","900400749","Reconhecimento Solicitado","3.334","536.57","9860523","1","NATURA - MATIAS BARBOSA","01 : ENTREGA NORMAL","0","RIO DE JANEIRO REG CUFA","RJ DUQUE - RIO DE JANEIRO","RJ CUFA","2026-09-29","2026-10-06","2026-10-02","DANIEL FERREIRA RIBEIRO","2026-10-02","1","DANIEL FERREIRA RIBEIRO","2026-10-05","SOLICITACAO DE RECONHECIMENTO","","","2026-10-05","2026-09-30","2026-09-30","5111765","28306908","LEILA MACHADO","RJ-RIO DE JANEIRO","TURIACU","CONSELHEIRO GALVAO,872","2134319060","003","ZVCS","21540000","31260971673990001904550010496175261826472077","2026-10-02","Dentro do Prazo","0","2"],["394119","0087231207","265612529","Coleta Solicitada","0.01","15.99","9904581","1","NATURA - NASP","32 : SNAC COLETA","2023","REGIAO 20 S.PAULO T 2","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-19","2026-10-21","2026-10-21","SIDNEI SANTOS RIBEIRO","2026-10-21","1","SIDNEI SANTOS RIBEIRO","2026-10-21","TENTATIVA DE COLETA","","","2026-10-21","","","21892652","28549139","SANIS SILVA","SAO PAULO","VILA PRIMAVERA","RUA COMACARI,36","","003","ZCSC","2735110","35261071673990003940550030003941191210577630","1900-01-01","Atrasado","-46314","8"],["2719894","0265442800","608087177","Transferência","0.982","244.97","9902227","1","NATURA - NASP","21 : RN","2015","REGIAO 1 SAO PAULO A (2)","SP CARAPICUIBA","SP GUARULHOS","2026-10-17","2026-10-21","2026-10-21","ROUTER - GRU","2026-10-19","17","","","","","","","2026-10-17","","279791097","19298242","TIAGO TIGUEN SINZATO","SP-SAO PAULO","BOM RETIRO","PADRE EDGAR DE AQUINO ROCHA,9","11914146688","099","ZVON","1121040","35261071673990003940550070027198941542539531","2026-10-21","Dentro do Prazo","0","16"],["46422559","0264131983","900374529","Coleta Solicitada","4.7","478.58","9859612","1","NATURA - NASP","01 : ENTREGA NORMAL","2038","REGIAO 11 S.PAULO K","SP CARAPICUIBA","SP CARAPICUIBA","2026-09-29","2026-10-21","2026-10-02","ROUTER - CAR","2026-10-21","9","DIAS ENTREGADORA","2026-10-20","TRANSPORTES SOLICITOU COLETA A DEST. EM","","","2026-10-20","2026-09-30","2026-09-30","299297098","27466270","ANDREA DA CONCEICAO SANTOS","SP-SAO PAULO","PERDIZES","R PALESTRA ITALIA,199","11993888207","009","ZVCS","5005030","35260971673990003940550010464225591791268477","2026-10-02","Dentro do Prazo","1","8"],["46517554","0265130583","904223717","Aguardando Expedição","4.639","477.01","9892212","1","NATURA - NASP","01 : ENTREGA NORMAL","2032","JANDIRA","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-13","2026-10-21","2026-10-16","ROUTER - CAR","2026-10-21","21","DIAS ENTREGADORA","2026-10-20","SOLICITACAO DE REENTREGA","","","2026-10-20","2026-10-14","2026-10-14","84012820","27797945","ALINE DOS SANTOS ROCHA","SP-JANDIRA","JARDIM GABRIELA","MARQUES DE SANTO AMARO,8","1147076199","021","ZVCS","6626130","35261071673990003940550010465175541458324746","2026-10-16","Dentro do Prazo","1","0"],["46538957","0265085976","904003953","Reconhecimento Solicitado","3.223","283.81","9896645","1","NATURA - NASP","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-15","2026-10-21","2026-10-17","ROUTER - CAR","2026-10-21","12","ALAN WILLIAN PIVA","2026-10-20","SOLICITACAO DE RECONHECIMENTO","RECONHECIMENTO COM SUCESSO","","2026-10-20","2026-10-16","2026-10-16","473821010","28509829","Leonardo Fiola Escribano","SP-SAO PAULO","JARAGUA","R THEOFILO AZAMBUJA,145","11977778887","012","ZVCS","5181370","35261071673990003940550010465389571029676069","2026-10-17","Dentro do Prazo","0","2"],["46555984","0265406445","905342512","Aguardando Expedição","76.224","6789.04","9901018","9","NATURA - NASP","01 : ENTREGA NORMAL","2038","REGIAO 11 S.PAULO K","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-16","2026-10-21","2026-10-21","ROUTER - CAR","2026-10-21","9","","","","","","","2026-10-17","2026-10-17","150830467","27491413","ALAN DE OLIVEEIRA","SP-SAO PAULO","VILA ANASTACIO","DOS COROADOS,162","11966887740","010","ZVCS","5092020","35261071673990003940550010465559841681370147","2026-10-21","Dentro do Prazo","0","0"],["46561171","0265425845","905387674","Tentativa de Entrega","6.345","547.08","9901982","1","NATURA - NASP","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-17","2026-10-21","2026-10-21","ROUTER - CAR","2026-10-21","12","LUCAS NOVAIS SOUSA","2026-10-19","TENTATIVA DE ENTREGA","","","2026-10-19","2026-10-17","2026-10-17","250856786","27577893","LUCAS SILVA ALVES","SP-SAO PAULO","CJ HABITACIONAL","IDA GOMES,105","11989775184","012","ZVCS","5164030","35261071673990003940550010465611711969205955","2026-10-21","Dentro do Prazo","0","4"],["46561179","0265460660","905520340","Tentativa de Entrega","6.486","809.76","9901982","1","NATURA - NASP","01 : ENTREGA NORMAL","2036","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-17","2026-10-21","2026-10-21","ROUTER - CAR","2026-10-21","8","RENAN FELIX SOUZA CLORADO","2026-10-20","2A TENTATIVA DE ENTREGA","","","2026-10-20","2026-10-17","2026-10-17","411921010","28534695","MARINALVA SILVA PEREIRA COIMBRA","SP-SAO PAULO","JARDIM SAO JOAO","R FRIEDRICH VON VOITH,1972","11945514153","008","ZVCS","2995000","35261071673990003940550010465611791364499770","2026-10-21","Dentro do Prazo","0","4"],["46561837","0265439563","608037211","Transferência","1.178","96.25","9902180","1","NATURA - NASP","21 : RN","2015","REGIAO 1 SAO PAULO A (2)","SP CARAPICUIBA","SP GUARULHOS","2026-10-17","2026-10-21","2026-10-21","ROUTER - GRU","2026-10-19","16","","","","","","","2026-10-17","","310294754","28536327","Henry M. Terasaka","SP-Sao Paulo","Se","R Tabatinguera,350","11941851713","001","ZVEC","1020000","35261071673990003940550010465618371561841738","2026-10-21","Dentro do Prazo","0","16"],["46561839","0265512794","608161893","Transferência","1.096","165.69","9902180","1","NATURA - NASP","21 : RN","2015","REGIAO 1 SAO PAULO A (2)","SP CARAPICUIBA","SP GUARULHOS","2026-10-17","2026-10-21","2026-10-21","ROUTER - GRU","2026-10-19","16","","","","","","","2026-10-17","","91872650","28536344","ANA BUENO","SAO PAULO","REPUBLICA","IPIRANGA,200","11999855238","0","ZVEC","1046925","35261071673990003940550010465618391865079687","2026-10-21","Dentro do Prazo","0","16"],["46561840","0265489866","608139923","Transferência","0.409","188.44","9902180","1","NATURA - NASP","21 : RN","2015","REGIAO 1 SAO PAULO A (2)","SP CARAPICUIBA","SP GUARULHOS","2026-10-17","2026-10-21","2026-10-21","ROUTER - GRU","2026-10-19","17","","","","","","","2026-10-17","","9398678","28536345","Edson Hehs Cunha","SP-SAO PAULO","BOM RETIRO","RUDGE,810","11991469449","063","ZVEC","1134000","35261071673990003940550010465618401097333704","2026-10-21","Dentro do Prazo","0","16"],["46566878","0265494944","905659414","Aguardando Expedição","3.42","300.49","9905033","1","NATURA - NASP","01 : ENTREGA NORMAL","2026","CAJAMAR","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-19","2026-10-21","2026-10-21","ROUTER - CAR","2026-10-21","30","","","","","","","2026-10-20","2026-10-20","413214044","28550997","Tamires Augusto","SP-CAJAMAR","VAU NOVO","R ANA PROCOPIO DE MORAES,2502","11915198345","018","ZVCS","7762020","35261071673990003940550010465668781296678663","2026-10-21","Dentro do Prazo","0","0"],["46567627","0265473113","905564800","Aguardando Expedição","31.098","4470.34","9905372","5","NATURA - NASP","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-19","2026-10-21","2026-10-21","ROUTER - CAR","2026-10-21","12","","","","","","","2026-10-20","2026-10-20","60230983","27751771","SELMA MARIA ROLI","SP-SAO PAULO","JARDIM MUTINGA","SALOA,91","11946493593","012","ZVCS","5159040","35261071673990003940550010465676271795109324","2026-10-21","Dentro do Prazo","0","0"],["46567633","0265485294","905625826","Aguardando Expedição","6.113","317.42","9905372","1","NATURA - NASP","01 : ENTREGA NORMAL","2062","REGIAO 6 SAO PAULO F","SP CARAPICUIBA","SP SAO BERNARDO","2026-10-19","2026-10-21","2026-10-21","ROUTER - SBC","2026-10-21","12","","","","","","","2026-10-20","","440515","28552687","MARIA DO CARMO CORREA TRINANES","SP-SAO PAULO","VILA MARIANA","R VERGUEIRO,4900","11991484235","014","ZVCS","4102002","35261071673990003940550010465676331736575826","2026-10-21","Dentro do Prazo","0","0"],["46567826","0265505400","905690426","Aguardando Expedição","5.081","697.07","9905372","1","NATURA - NASP","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-19","2026-10-21","2026-10-21","ROUTER - CAR","2026-10-21","12","","","","","","","2026-10-20","2026-10-20","210143045","27664423","VANDA SILVA SAMPAIO","SP-SAO PAULO","VILA JARAGUA","TURISTICA DO JARAGUA,603","11941956040","012","ZVCS","5161000","35261071673990003940550010465678261626827533","2026-10-21","Dentro do Prazo","0","0"],["46567827","0265488686","905624957","Aguardando Expedição","3.377","495.64","9905372","1","NATURA - NASP","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-19","2026-10-21","2026-10-21","ROUTER - CAR","2026-10-21","12","","","","","","","2026-10-20","2026-10-20","41127986","27732649","FRANCISCO ANDRADE REIS","SP-SAO PAULO","PARQUE ANHANGUE","AMARAL DOS BARRETOS,695","11982776236","012","ZVCS","5158040","35261071673990003940550010465678271988555122","2026-10-21","Dentro do Prazo","0","0"],["46567828","0265507218","905642335","Aguardando Expedição","7.014","667.91","9905372","1","NATURA - NASP","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-19","2026-10-21","2026-10-21","ROUTER - CAR","2026-10-21","12","","","","","","","2026-10-20","2026-10-20","54758491","27593711","CRISTIANE NASCIMENTO SWAROVSKY","SP-SAO PAULO","JARAGUA","VENANCIO DINIZ JUNQUEIRA,158","11980362530","012","ZVCS","5160000","35261071673990003940550010465678281805437149","2026-10-21","Dentro do Prazo","0","0"],["394096","0087230891","265540522","Coleta Solicitada","0.246","76.48","9902862","1","NATURA - NASP","32 : SNAC COLETA","2094","ITAQUAQUECETUBA","SP GUARULHOS","SP GUARULHOS","2026-10-17","2026-10-21","2026-10-21","SAMUEL AZEVEDO DA SILVA","2026-10-21","1","SAMUEL AZEVEDO DA SILVA","2026-10-21","2A TENTATIVA DE COLETA","","","2026-10-21","","","24727385","28538993","KATIA CANDIDO DE LIMA","Itaquaquecetuba","Jaridm Marcelo","R Picarros,52","","022","ZCSC","8576970","35261071673990003940550030003940961807015257","1900-01-01","Atrasado","-46314","8"],["394155","0087231505","265653180","Coleta Solicitada","0.269","80.43","9905662","1","NATURA - NASP","32 : SNAC COLETA","2092","GUARULHOS C","SP GUARULHOS","SP GUARULHOS","2026-10-19","2026-10-21","2026-10-21","LUIZ CARLOS GARCIA","2026-10-21","1","LUIZ CARLOS GARCIA","2026-10-21","2A TENTATIVA DE COLETA","","","2026-10-21","","","81109571","28553941","SOLANGE DE LIMA RIBEIRO","GUARULHOS","PARQUE SAO MIGU","LAGO DE PEDRA,1285","11962682018","019","ZCSC","7260200","35261071673990003940550030003941551416466865","1900-01-01","Atrasado","-46314","8"],["46551627","0265382407","905239774","Tentativa de Entrega","8.173","1224.33","9899475","1","NATURA - NASP","03 : ENTREGA EXPRESSA","259","CAMPOS DE JORDAO","SP SAO JOSE DOS CAMPOS","SP SAO JOSE DOS CAMPOS","2026-10-16","2026-10-21","2026-10-21","VINICIUS CONTAL ALVES","2026-10-21","1","VINICIUS CONTAL ALVES","2026-10-21","2A TENTATIVA DE ENTREGA","","","2026-10-21","2026-10-17","2026-10-17","80341543","27597265","VANESSA DE FATIMA EW WATERKEMPER","SP-CAMPOS DO JORDAO","VILA PAULISTA","JOS+ CARLOS COSTA SANTOS,410","12996766052","011","ZVCS","12460000","35261071673990003940550010465516271582977301","2026-10-21","Dentro do Prazo","0","4"],["46560682","0265415795","905356274","Tentativa de Entrega","3.549","374.54","9901989","1","NATURA - NASP","03 : ENTREGA EXPRESSA","259","TREMEMBE","SP SAO JOSE DOS CAMPOS","SP SAO JOSE DOS CAMPOS","2026-10-17","2026-10-21","2026-10-21","AURINO JULIO DOS SANTOS","2026-10-21","1","AURINO JULIO DOS SANTOS","2026-10-21","2A TENTATIVA DE ENTREGA","","","2026-10-21","2026-10-19","2026-10-19","29113490","27847917","CATARINA JESUS","SP-TREMEMBE","LOTEAMENTO JARD","R 6,340","12996047160","035","ZVCS","12128100","35261071673990003940550010465606821779351426","2026-10-21","Dentro do Prazo","0","4"],["46568427","0265512622","905721950","Tentativa de Entrega","8.317","988.35","9905507","1","NATURA - NASP","01 : ENTREGA NORMAL","258","PINDAMONHANGABA - B","SP SAO JOSE DOS CAMPOS","SP SAO JOSE DOS CAMPOS","2026-10-19","2026-10-21","2026-10-21","URANO ALMEIDA SOUSA","2026-10-21","1","URANO ALMEIDA SOUSA","2026-10-21","TENTATIVA DE ENTREGA","","","2026-10-21","2026-10-20","2026-10-20","177113987","27484151","MARIA ALMEIDA BARBOSA DA SILVA","SP-PINDAMONHANGABA","BELA VISTA","MARCOS DAMAS CALDEIRA,51","12991016163","040","ZVCS","12412510","35261071673990003940550010465684271940405840","2026-10-21","Dentro do Prazo","0","4"],["394156","0087231510","265654780","Coleta Solicitada","0.034","35.74","9905400","1","NATURA - NASP","32 : SNAC COLETA","2077","SANTO ANDRE A","SP SAO MATEUS","SP SAO MATEUS","2026-10-19","2026-10-21","2026-10-21","ROUTER - SMA","2026-10-21","43","MARCELO RIBEIRO YAMAUCHI","2026-10-20","TENTATIVA DE COLETA","1.DEST. AUSENTE","","2026-10-20","","","292770936","28554078","MARIA APARECIDA CAMPOS","SANTO ANDRE","JARDIM ALVORADA","R DOUTOR ALMENOR JARDIM SILVEIRA,0","","033","ZCSC","9180070","35261071673990003940550030003941561095495979","1900-01-01","Atrasado","-46314","8"],["2719676","0265411149","608047507","Aguardando Expedição","3.853","799.36","9900119","1","NATURA - NASP","21 : RN","2015","REGIAO 1 SAO PAULO A (2)","SP CARAPICUIBA","SP GUARULHOS","2026-10-16","2026-10-20","2026-10-20","ROUTER - GRU","2026-10-19","17","","","","","","","2026-10-16","","279791097","19298242","TIAGO TIGUEN SINZATO","SP-SAO PAULO","BOM RETIRO","PADRE EDGAR DE AQUINO ROCHA,9","11914146688","099","ZVON","1121040","35261071673990003940550070027196761651763662","2026-10-20","Atrasado","-1","0"],["2719678","0265405812","608040996","Transferência","0.484","80.23","9900119","1","NATURA - NASP","21 : RN","2015","REGIAO 1 SAO PAULO A (2)","SP CARAPICUIBA","SP GUARULHOS","2026-10-16","2026-10-20","2026-10-20","ROUTER - GRU","2026-10-19","16","","","","","","","2026-10-16","","21647429","24234498","Nadja Pereira","SP-SAO PAULO","CENTRO","MARTINS FONTES,164","11965665616","001","ZVON","1050000","35261071673990003940550070027196781767890673","2026-10-20","Atrasado","-1","16"],["46503866","0264936847","903337984","Aguardando Expedição","4.524","734.3","9886126","1","NATURA - NASP","01 : ENTREGA NORMAL","2036","REGIAO 21 S.PAULO U - RISCO","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-09","2026-10-20","2026-10-14","ROUTER - CAR","2026-10-21","43","DIAS ENTREGADORA","2026-10-19","SOLICITACAO DE REENTREGA","","","2026-10-19","2026-10-10","2026-10-10","13118269","28443474","CL-UDIA RIBEIRO DE SOUZA CARMO","SP-SAO PAULO","VILA NOVA PARAD","MONTE AZUL PAULISTA,675","11967813440","054","ZVCS","2883050","35261071673990003940550010465038661798627953","2026-10-14","Dentro do Prazo","0","0"],["46553295","0265424007","608057205","Aguardando Expedição","3.316","156.25","9900113","1","NATURA - NASP","21 : RN","2015","REGIAO 1 SAO PAULO A (2)","SP CARAPICUIBA","SP GUARULHOS","2026-10-16","2026-10-20","2026-10-20","ROUTER - GRU","2026-10-19","16","","","","","","","2026-10-16","","213126940","28525412","Solanje Matos","SP-SAO PAULO","CENTRO","MAUA,1110","11954315044","001","ZVEC","1028000","35261071673990003940550010465532951767890676","2026-10-20","Atrasado","-1","0"],["46561084","0265470093","905558198","Aguardando Expedição","28.391","4118.31","9901982","5","NATURA - NASP","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-17","2026-10-20","2026-10-20","","","","","","","","","","2026-10-17","2026-10-17","63846900","27500664","MARISA RIBEIRO BARROS ZANETTI","SP-SAO PAULO","VILA GUEDES","CONFIDENCIA MUSICAL,109","11988442837","011","ZVCS","5134360","35261071673990003940550010465610841269869918","2026-10-20","Atrasado","-1","0"],["46579333","0265516626","904183632","Aguardando Expedição","1.727","323.12","9907875","1","NATURA - NASP","01 : ENTREGA NORMAL","2036","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-20","2026-10-20","2026-10-23","","","","","","","","","","2026-10-21","2026-10-21","23779683","27576767","MARIA DA CONCEI¦+O DA SILVA LIMA","SP-SAO PAULO","VILA ANA ROSA","R PRIMAVERA,24","11965088904","008","** REFATURAMENTO **","2997100","35261071673990003940550010465793331944999419","2026-10-23","Dentro do Prazo","2","0"],["393350","0087219592","264292842","Coleta Solicitada","0.017","12.85","9862857","1","NATURA - NASP","32 : SNAC COLETA","2092","GUARULHOS C","SP GUARULHOS","SP GUARULHOS","2026-09-30","2026-10-20","2026-10-02","WALTERSON DORIA FARIAS","2026-10-21","1","WALTERSON DORIA FARIAS","2026-10-21","TENTATIVA DE COLETA","","","2026-10-21","","","54447402","28315967","FABRICIA CARLA DA SILVA","GUARULHOS","PARQUE UIRAPURU","VENANCIO AIRES,240","","015","ZCSC","7230450","35260971673990003940550030003933501527573988","1900-01-01","Atrasado","-46310","8"],["46561440","0265461621","905524495","Tentativa de Entrega","4.051","594.08","9901983","1","NATURA - NASP","01 : ENTREGA NORMAL","2023","REGIAO 20 S.PAULO T","SP GUARULHOS","SP GUARULHOS","2026-10-17","2026-10-20","2026-10-20","ROUTER - GRU","2026-10-19","39","THIAGO GONÇALVES BARBOSA","2026-10-20","2A TENTATIVA DE ENTREGA","","","2026-10-20","2026-10-17","2026-10-17","458372250","28045227","DIEISE CRISTINA IZAUL RODRIGUES","SP-SAO PAULO","VILA CELESTE","R JOAQUIM AFONSO DE SOUZA,882","11975941135","099","ZVCS","2543000","35261071673990003940550010465614401226950737","2026-10-20","Atrasado","-1","4"],["46583406","0265563317","903714950","Tentativa de Entrega","5.047","824.59","9909114","1","NATURA - NASP","01 : ENTREGA NORMAL","2073","REGIAO 22 S.PAULO V","SP SAO MATEUS","SP SAO MATEUS","2026-10-20","2026-10-20","2026-10-24","ROBERTO DE BARROS","2026-10-21","1","ROBERTO DE BARROS","2026-10-21","TENTATIVA DE ENTREGA","","","2026-10-21","2026-10-21","2026-10-21","73206229","27804870","VERA LUCIA","SP-SAO PAULO","GUAIANAZES","BRIGADEIRO HARDMAN,36","11986456593","025","** REFATURAMENTO **","8440280","35261071673990003940550010465834061323039118","2026-10-24","Dentro do Prazo","3","4"],["46551569","0265403478","905333923","Aguardando Expedição","2.195","66.4","9899340","1","NATURA - NASP","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-16","2026-10-19","2026-10-19","ROUTER - CAR","2026-10-21","12","ALAN WILLIAN PIVA","2026-10-19","2A TENTATIVA DE ENTREGA","1.DEST. AUSENTE","","2026-10-19","2026-10-17","2026-10-17","467895171","28522745","ALEXANDRA FERREIRA DE OLIVEIRA","SP-SAO PAULO","JARAGUA","R JOAQUIM JOSE DE LIMA,158","11984944495","0","ZVCS","5160120","35261071673990003940550010465515691976501394","2026-10-19","Atrasado","-2","0"],["46553340","0265399362","905300255","Tentativa de Entrega","1.75","659.09","9899929","1","NATURA - NASP","01 : ENTREGA NORMAL","2094","ITAQUAQUECETUBA","SP GUARULHOS","SP GUARULHOS","2026-10-16","2026-10-19","2026-10-19","SAMUEL AZEVEDO DA SILVA","2026-10-21","1","SAMUEL AZEVEDO DA SILVA","2026-10-21","DIFICULDADES NA REGIAO DE ENTREGA","","","2026-10-21","2026-10-17","2026-10-17","14983796","27945015","NEIDE DOS SANTOS RAMOS","SP-ITAQUAQUECETUBA","JARDIM MARIA RO","R TIETA DO AGRESTE,111","11969734666","022","ZVCS","8582843","35261071673990003940550010465533401518791965","2026-10-19","Atrasado","-2","4"],["46553596","0265320116","905006962","Transferência","9.256","820.17","9899929","1","NATURA - NASP","01 : ENTREGA NORMAL","2071","REGIAO 22 S.PAULO V","SP GUARULHOS","SP SAO MATEUS","2026-10-16","2026-10-19","2026-10-19","ROUTER - SMA","2026-10-21","15","","","","","","","2026-10-17","","230247261","28526776","CAIME ALMEIDA DE SOUZA","SP-SAO PAULO","VILA CARMOSINA","R SERRA DE SANTA MARTA,256","11913612427","019","ZVCS","8290420","35261071673990003940550010465535961221182991","2026-10-19","Atrasado","-2","16"],["46556094","0265309770","904976530","Tentativa de Entrega","3.521","1008.46","9901017","1","NATURA - NASP","01 : ENTREGA NORMAL","2023","REGIAO 20 S.PAULO T","SP GUARULHOS","SP GUARULHOS","2026-10-16","2026-10-19","2026-10-19","ROUTER - GRU","2026-10-19","13","THIAGO GONÇALVES BARBOSA","2026-10-20","2A TENTATIVA DE ENTREGA","","","2026-10-20","2026-10-17","2026-10-17","303526661","27753343","AURIA GAROFANO","SP-SAO PAULO","PARQUE PERUCHE","R AGUAS VIRTUOSAS,525","11946160272","099","ZVCS","2532000","35261071673990003940550010465560941474957004","2026-10-19","Atrasado","-2","4"],["46557032","0265373548","905225612","Tentativa de Entrega","15.171","1297.37","9900858","2","NATURA - NASP","01 : ENTREGA NORMAL","2053","REGIAO 10 S.PAULO J (3)","SP TABOAO DA SERRA","SP TABOAO DA SERRA","2026-10-16","2026-10-19","2026-10-19","RAFAEL DOS SANTOS BORGES","2026-10-21","1","RAFAEL DOS SANTOS BORGES","2026-10-21","DIFICULDADES NA REGIAO DE ENTREGA","","","2026-10-21","2026-10-17","2026-10-17","26479796","28526364","MARIA MADALENA ROBERTA DA SILVA AZE","SP-SAO PAULO","PARQUE NOVO SAN","DAS TRES MARIAS,7","1158347712","050","ZVCS","5874180","35261071673990003940550010465570321748953916","2026-10-19","Atrasado","-2","4"],["46526192","0265201901","904532390","Tentativa de Entrega","7.612","700.6","9893507","1","NATURA - NASP","01 : ENTREGA NORMAL","2036","REGIAO 21 S.PAULO U - RISCO","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-14","2026-10-17","2026-10-17","ROUTER - CAR","2026-10-21","4","RICHARD DA SILVA ROCHA","2026-10-20","2A TENTATIVA DE ENTREGA","","","2026-10-20","2026-10-15","2026-10-15","147726883","28325060","DIONEIA MARIA","SP-SAO PAULO","VILA PENTEADO","ALDO FABRIZI,4","1138515229","052","ZVCS","2867097","35261071673990003940550010465261921467797439","2026-10-17","Atrasado","-4","4"],["46537333","0265250929","904748031","Aguardando Expedição","12.611","717.13","9896263","2","NATURA - NASP","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-15","2026-10-17","2026-10-17","ROUTER - CAR","2026-10-21","12","JANDICLEI DOS SANTOS","2026-10-18","TENTATIVA DE ENTREGA","1.DEST. AUSENTE","","2026-10-18","2026-10-16","2026-10-16","2871173","27478679","ROSELI APARECIDA DO PRADO RUSEW","SP-SAO PAULO","CIDADE D ABRIL","DOMENICO FERRARA,140","11963175568","012","ZVCS","5182270","35261071673990003940550010465373331531373906","2026-10-17","Atrasado","-4","0"],["46538987","0265075136","903977337","Aguardando Expedição","2.962","601.84","9896645","1","NATURA - NASP","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-15","2026-10-17","2026-10-17","ROUTER - CAR","2026-10-21","12","","","","","","","2026-10-16","2026-10-16","241228786","27646339","VERA LUCIA MARIA PEREIRA","SP-SAO PAULO","VILA JARAGUA","EST TURISTICA DO JARAGUA,449","11989617037","012","ZVCS","5161000","35261071673990003940550010465389871997009272","2026-10-17","Atrasado","-4","0"],["46539266","0265240934","904700157","Aguardando Expedição","9.625","631.53","9896645","1","NATURA - NASP","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-15","2026-10-17","2026-10-17","ROUTER - CAR","2026-10-21","12","","","","","","","2026-10-16","2026-10-16","78609240","28507664","MARIA ALEXANDRE","SP-SAO PAULO","VILA JARAGUA","VALENTINO CARDOSO,19","1139015713","012","ZVCS","5161100","35261071673990003940550010465392661336499542","2026-10-17","Atrasado","-4","0"],["46539268","0265295378","904925980","Aguardando Expedição","10.191","807.01","9896645","2","NATURA - NASP","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-15","2026-10-17","2026-10-17","ROUTER - CAR","2026-10-21","12","","","","","","","2026-10-16","2026-10-16","88120244","28509864","ZELIA SILVA DE ARAUJO","SP-SAO PAULO","JARDIM MUTINGA","SALOA,485","11969460254","012","ZVCS","5159040","35261071673990003940550010465392681031587337","2026-10-17","Atrasado","-4","0"],["46551496","0265321482","900993329","Aguardando Expedição","5.853","418.54","9899060","1","NATURA - NASP","01 : ENTREGA NORMAL","2023","REGIAO 20 S.PAULO T 2","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-16","2026-10-16","2026-10-20","ROUTER - CAR","2026-10-21","3","","","","","","","2026-10-17","2026-10-17","1933930","28522483","ANA CANDIDO","SP-SAO PAULO","VILA PRIMAVERA","BAIAO PARENTE,322","11997602441","003","** REFATURAMENTO **","2735000","35261071673990003940550010465514961974252224","2026-10-20","Atrasado","-1","0"],["46539305","0265248627","901760616","Transferência","8.577","624.22","9896862","1","NATURA - NASP","01 : ENTREGA NORMAL","2032","ITAPEVI","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-15","2026-10-15","2026-10-17","","","","","","","","","","2026-10-16","2026-10-16","41358295","28365656","RITA MATILDES ANGELO","SP-ITAPEVI","RECANTO VERDE","R SANTA LUZ,739","11960149020","007","** REFATURAMENTO **","6673015","35261071673990003940550010465393051757711432","2026-10-17","Atrasado","-4","16"],["46128862","0261408771","887333837","Coleta Solicitada","3.064","535.16","9765760","1","NATURA - NASP","01 : ENTREGA NORMAL","2023","REGIAO 20 S.PAULO T 2","SP CARAPICUIBA","SP CARAPICUIBA","2026-08-22","2026-10-14","2026-08-26","SIDNEI SANTOS RIBEIRO","2026-10-13","1","SIDNEI SANTOS RIBEIRO","2026-10-13","TRANSPORTES SOLICITOU COLETA A DEST. EM","SOLICITACAO DE COLETA","","2026-10-14","2026-08-23","2026-08-23","166761834","27577794","ANA VIEIRA","SP-SAO PAULO","JDIM ANTARTICA","MARIANA CALIGLIORI RONCHETTI,925","11957626533","002","** REFATURAMENTO **","2650000","35260871673990003940550010461288621415166326","2026-08-26","Dentro do Prazo","1","8"],["46481969","0264689125","892000095","Reconhecimento Solicitado","1.962","337.7","9877105","1","NATURA - NASP","01 : ENTREGA NORMAL","2037","REGIAO 21 S.PAULO U","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-06","2026-10-14","2026-10-10","ROUTER - CAR","2026-10-21","12","JANDICLEI DOS SANTOS","2026-10-18","2a TENTATIVA DE RECONHECIMENTO","DESTINATARIO AUSENTE","","2026-10-18","2026-10-07","2026-10-07","187853916","28403883","MILENA OLIVEIRA DA SILVA","SP-SAO PAULO","VILA JARAGUA","PIERRE LAFAGE,219","11974158442","012","ZVCS","5163060","35261071673990003940550010464819691315912415","2026-10-10","Dentro do Prazo","1","2"],["393762","0087225373","264901420","Coleta Solicitada","0.015","11.9","9883343","1","NATURA - NASP","32 : SNAC COLETA","2036","REGIAO 21 S.PAULO U - RISCO","SP CARAPICUIBA","SP CARAPICUIBA","2026-10-08","2026-10-13","2026-10-13","ROUTER - CAR","2026-10-21","8","MARCIO DE BRITO FERREIRA","2026-10-20","TENTATIVA DE COLETA","","","2026-10-20","","","443308314","28433327","FABIANA RODRIGUES DA SIL","SAO PAULO","JARDIM PAULISTA","EST DA CACHOEIRA,231","","054","ZCSC","2814090","35261071673990003940550030003937621094533210","1900-01-01","Atrasado","-46314","8"]],"imports":[{"file":"(base inicial — relatórios de 21/10/2026)","at":"2026-10-22T18:50:44.059Z","v":33,"n":89}]};
+const LS_KEY = 'dash_entregas_v1';
+let S = null; // {fv,fn,v,n,imports,savedAt}
+let charts = {};
+let sortReverse = false;
+</script>
+
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:18px">
+    <h2>Motivos de insucesso / Ocorrências <span class="count" id="countOcorr">–</span></h2>
+    <div style="height:230px;position:relative"><canvas id="hbar"></canvas></div>
+  </div>
+
+
+  <div class="panel" style="margin-bottom:18px">
+    <h2>Viagens <span class="count" id="countViagens">–</span>
+      <span class="spacer"></span>
+      <button class="btn" id="btnSortV" title="Alterna a ordem por data">⇅ Ordenar por data</button>
+    </h2>
+    <div class="tbl-wrap"><table id="tblViagens"><thead></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:18px">
+    <h2>Notas pendentes / ocorrências <span class="count" id="countNotas">–</span></h2>
+    <div class="tbl-wrap"><table id="tblNotas"><thead></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:18px">
+    <h2>Histórico de importações <span class="count" id="countImports">–</span></h2>
+    <div class="tbl-wrap" style="max-height:260px"><table class="imports" id="tblImports"><thead></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="foot" id="foot"></div>
+</div><!-- /wrap -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+// ===================== UTIL =====================
+const $ = id => document.getElementById(id);
+const fmtInt = n => (n || 0).toLocaleString('pt-BR');
+const pct = (a, b) => b ? (100 * a / b).toFixed(1).replace('.', ',') + '%' : '\u2013';
+const norm = s => String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const val = v => String(v == null ? '' : v).trim();
+function toast(msg, cls) {
+  const t = document.createElement('div'); t.textContent = msg; if (cls) t.className = cls;
+  $('toast').appendChild(t); setTimeout(() => t.remove(), 6000);
+}
+function serialToDate(v) {
+  const s = val(v); if (!s) return '';
+  if (/^-?\d+(\.\d+)?$/.test(s)) {
+    const d = new Date(Math.round((parseFloat(s) - 25569) * 86400000));
+    if (isNaN(d)) return s;
+    return d.toISOString().slice(0, 10);
+  }
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  return s;
+}
+
+// ===================== PERSISTÊNCIA =====================
+function loadState() {
+  try { const raw = localStorage.getItem(LS_KEY); if (raw) return JSON.parse(raw); } catch (e) {}
+  return structuredClone ? structuredClone(DEFAULT_SEED) : JSON.parse(JSON.stringify(DEFAULT_SEED));
+}
+function saveState() {
+  S.savedAt = new Date().toISOString();
+  try { localStorage.setItem(LS_KEY, JSON.stringify(S)); return true; }
+  catch (e) { toast('\u26a0 N\u00e3o foi poss\u00edvel salvar no navegador (armazenamento cheio). Exporte os CSVs e reimporte se necess\u00e1rio.', 'err'); return false; }
+}
+function rowsV() { return S.v.map(r => zipObj(S.fv || V_FIELDS, r)); }
+function rowsN() { return S.n.map(r => zipObj(S.fn || N_FIELDS, r)); }
+function zipObj(fields, row) { const o = {}; fields.forEach((k, i) => o[k] = row[i]); return o; }
+
+
+// ===================== INGESTÃO (NOVOS ARQUIVOS) =====================
+function detectHeader(rows) {
+  const n = Math.min(rows.length, 40);
+  for (let i = 0; i < n; i++) {
+    const r = rows[i]; if (!r) continue;
+    const h = {}; r.forEach((c, ci) => { const k = norm(c); if (k) h[k] = ci; });
+    if (h['nf'] !== undefined && h['status de entrega'] !== undefined) return { type: 'notas', idx: i, map: h };
+    if (h['data entrega'] !== undefined && h['motorista'] !== undefined) return { type: 'viagens', idx: i, map: h };
+  }
+  return null;
+}
+const NORM_MAP = {
+  'nf':'NF','solicitacao':'Solicitação','pedido':'Pedido','status de entrega':'Status','peso':'Peso','valor nf':'Valor NF',
+  'minuta/dt':'Minuta','volumes':'Volumes','cliente':'Cliente','tipo entrega':'Tipo Entrega','cod setor':'Cód Setor',
+  'regiao':'Região','filial':'Filial','filial de entrega':'Filial de Entrega','embarque':'Embarque','data prazo':'Data Prazo',
+  'data prazo cliente':'Data Prazo Cliente','motorista ultima viagem':'Motorista Últ. Viagem','data ultima viagem':'Data Últ. Viagem',
+  'numero ultima viagem':'Nº Últ. Viagem','motorista ocorrencia':'Motorista Ocorrência','data ocorrencia':'Data Ocorrência',
+  'ocorrencia':'Ocorrência','subocorrencia':'Subocorrência','obs ocorrencia':'Obs Ocorrência',
+  'data registro ocorrencia':'Data Registro Ocorr.','data primeira bipagem':'Data Primeira Bipagem',
+  'data bipagem filial':'Data Bipagem Filial','cod destinatario':'Cód Destinatário','cod roteirizador':'Cód Roteirizador',
+  'destinatario':'Destinatário','cidade':'Cidade','bairro':'Bairro','endereco':'Endereço','telefone':'Telefone',
+  'subrota':'Subrota','obs entrega':'Obs Entrega','cep destinatario':'CEP','chavenfe':'Chave NF-e',
+  'prazo efetividade':'Prazo Efetividade','efetividade':'Efetividade','offset efetividade':'Offset Efetividade','status':'Status Num'
+};
+const NORM_MAP_V = {
+  'data entrega':'Data Entrega','filial':'Filial','motorista':'Motorista','viagens':'Nº Viagens','setores':'Setores',
+  'ajudante':'Ajudante','veiculo':'Veículo','modelo veiculo':'Modelo Veículo','entregas':'Entregas','volumes':'Volumes',
+  'sucessos':'Sucessos','insucessos':'Insucessos'
+};
+const DATE_FIELDS_V = new Set(['Data Entrega']);
+const DATE_FIELDS_N = new Set(['Embarque','Data Prazo','Data Prazo Cliente','Data Últ. Viagem','Data Ocorrência','Data Registro Ocorr.','Data Primeira Bipagem','Data Bipagem Filial','Prazo Efetividade']);
+const NUM_FIELDS_V = new Set(['Entregas','Volumes','Sucessos','Insucessos']);
+
+function extractRows(ws) {
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+  const hdr = detectHeader(rows);
+  if (!hdr) return null;
+  const out = [];
+  const nfCol = hdr.map['nf'];
+  for (let i = hdr.idx + 1; i < rows.length; i++) {
+    const r = rows[i]; if (!r) continue;
+    if (hdr.type === 'notas') { if (!val(r[nfCol])) continue; }
+    else {
+      const f = val(r[hdr.map['filial']]), m = val(r[hdr.map['motorista']]);
+      if (!f && !m) continue; if (/total| soma/i.test(f + m)) continue;
+    }
+    const o = {};
+    const map = hdr.type === 'notas' ? NORM_MAP : NORM_MAP_V;
+    for (const nk in map) {
+      const ci = hdr.map[nk];
+      if (ci === undefined) continue;
+      const label = map[nk];
+      const rawv = val(r[ci]);
+      if (hdr.type === 'notas' && DATE_FIELDS_N.has(label)) o[label] = serialToDate(rawv);
+      else if (hdr.type === 'viagens' && DATE_FIELDS_V.has(label)) o[label] = serialToDate(rawv);
+      else if (hdr.type === 'viagens' && NUM_FIELDS_V.has(label)) o[label] = parseFloat(rawv) || 0;
+      else o[label] = rawv;
+    }
+    out.push(o);
+  }
+  return { type: hdr.type, rows: out };
+}
+
+
+function ingestWorkbook(wb) {
+  const res = { viagens: [], notas: [] };
+  for (const name of wb.SheetNames) {
+    const ex = extractRows(wb.Sheets[name]);
+    if (!ex) continue;
+    if (ex.type === 'notas') res.notas.push(...ex.rows); else res.viagens.push(...ex.rows);
+  }
+  return res;
+}
+
+// -------- merge preservando histórico (coalesce: campo vazio não apaga o antigo) --------
+const viagemKey = v => [v['Data Entrega'], v['Filial'], v['Motorista'], v['Nº Viagens'], v['Veículo'], v['Setores']].join('|');
+const notaKey = v => [(v['Filial de Entrega'] || v['Filial']), v['NF']].join('|');
+function mergeInto(base, incoming, keyFn) {
+  let added = 0, updated = 0;
+  const map = new Map(base.map(x => [keyFn(x), x]));
+  for (const item of incoming) {
+    const k = keyFn(item);
+    const old = map.get(k);
+    if (!old) { map.set(k, item); added++; continue; }
+    for (const f2 in item) {
+      const nv = item[f2];
+      if (val(nv) !== '') { const ov = old[f2] == null ? '' : old[f2]; if (String(ov) !== String(nv)) updated++; old[f2] = nv; }
+    }
+  }
+  return { rows: Array.from(map.values()), added, updated };
+}
+
+// ===================== IMPORTAR ARQUIVOS =====================
+function handleFiles(fileList) {
+  const files = Array.from(fileList).filter(f => /\.xlsx$/i.test(f.name));
+  if (!files.length) return toast('\u26a0 Nenhum arquivo .xlsx reconhecido', 'err');
+  files.forEach(file => {
+    const rd = new FileReader();
+    rd.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const inc = ingestWorkbook(wb);
+        const mv = mergeInto(rowsV(), inc.viagens, viagemKey);
+        const mn = mergeInto(rowsN(), inc.notas, notaKey);
+        S.v = mv.rows.map(o => S.fv.map(k => o[k] == null ? '' : o[k]));
+        S.n = mn.rows.map(o => S.fn.map(k => o[k] == null ? '' : o[k]));
+        S.imports.push({ file: file.name, at: new Date().toISOString(), v: mv.added, n: mn.added, uv: mv.updated, un: mn.updated });
+        saveState();
+        render();
+        toast('\u2705 ' + file.name + ': +' + mv.added + ' viagens (~' + mv.updated + ' atualizadas), +' + mn.added + ' notas (~' + mn.updated + ' atualizadas)', 'ok');
+      } catch (err) {
+        console.error(err);
+        toast('\u274c Erro em ' + file.name + ': ' + (err.message || err), 'err');
+      }
+    };
+    rd.readAsArrayBuffer(file);
+  });
+}
+const dz = $('dropzone'), fi = $('fileInput');
+dz.addEventListener('click', () => fi.click());
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); handleFiles(e.dataTransfer.files); });
+fi.addEventListener('change', () => { handleFiles(fi.files); fi.value = ''; });
+
+// ===================== SINCRONIZAÇÃO COM GOOGLE SHEETS =====================
+const SHEET_ID = '12_DwR-eL1fM-Aj77ZSFFxtTpLAC9PeN6FE2EoHTn-RA';
+const GVIZ_URL = aba => `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(aba)}&_nc=${Date.now()}`;
+
+async function syncGoogleSheets(manual = false) {
+  const btn = $('btnSyncSheets');
+  const oldText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin">🔄</span> Sincronizando…';
+  }
+  try {
+    const fetchAba = async (aba) => {
+      const resp = await fetch(GVIZ_URL(aba), { cache: 'no-store' });
+      if (!resp.ok) throw new Error(`Status HTTP ${resp.status} na aba ${aba}`);
+      return await resp.text();
+    };
+
+    const [csvV, csvN] = await Promise.all([
+      fetchAba('Viagens'),
+      fetchAba('Pendencias')
+    ]);
+
+    let inc = { viagens: [], notas: [] };
+
+    if (csvV && csvV.trim()) {
+      try {
+        const wbV = XLSX.read(csvV, { type: 'string' });
+        const exV = extractRows(wbV.Sheets[wbV.SheetNames[0]]);
+        if (exV && exV.rows) inc.viagens = exV.rows;
+      } catch (e) {
+        console.warn('Erro ao processar CSV de viagens:', e);
+      }
+    }
+
+    if (csvN && csvN.trim()) {
+      try {
+        const wbN = XLSX.read(csvN, { type: 'string' });
+        const exN = extractRows(wbN.Sheets[wbN.SheetNames[0]]);
+        if (exN && exN.rows) inc.notas = exN.rows;
+      } catch (e) {
+        console.warn('Erro ao processar CSV de pendências:', e);
+      }
+    }
+
+    if (!inc.viagens.length && !inc.notas.length) {
+      if (manual) toast('⚠️ Planilha do Google Sheets vazia ou inacessível', 'err');
+      return;
+    }
+
+    const mv = mergeInto(rowsV(), inc.viagens, viagemKey);
+    const mn = mergeInto(rowsN(), inc.notas, notaKey);
+    S.v = mv.rows.map(o => S.fv.map(k => o[k] == null ? '' : o[k]));
+    S.n = mn.rows.map(o => S.fn.map(k => o[k] == null ? '' : o[k]));
+    S.imports.push({
+      file: 'Google Sheets (Nuvem)',
+      at: new Date().toISOString(),
+      v: mv.added,
+      n: mn.added,
+      uv: mv.updated,
+      un: mn.updated
+    });
+    saveState();
+    render();
+
+    toast(`✅ Google Sheets sincronizado (+${mv.added} viagens, +${mn.added} notas)`, 'ok');
+  } catch (err) {
+    console.error('Falha na sincronização Google Sheets:', err);
+    if (manual) {
+      toast(`⚠️ Falha ao sincronizar: ${err.message || 'Verifique conexão com a internet'}. Dados locais mantidos.`, 'err');
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = oldText || '🔄 Sincronizar Google Sheets';
+    }
+  }
+}
+
+$('btnReset').addEventListener('click', () => {
+  if (!confirm('Zerar todo o hist\u00f3rico salvo e voltar aos dados da base inicial?')) return;
+  localStorage.removeItem(LS_KEY);
+  S = structuredClone ? structuredClone(DEFAULT_SEED) : JSON.parse(JSON.stringify(DEFAULT_SEED));
+  render(); toast('Hist\u00f3rico zerado \u2014 de volta \u00e0 base inicial', 'ok');
+});
+
+
+// ===================== FILTROS =====================
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return ({ '&': '\u0026amp;', '<': '\u0026lt;', '>': '\u0026gt;', '"': '\u0026quot;', "'": '\u0026#39;' })[c];
+  });
+}
+function fillSelect(sel, values, allLabel) {
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">' + allLabel + '</option>' +
+    values.map(v2 => '<option value="' + escHtml(v2) + '">' + escHtml(v2) + '</option>').join('');
+  if (values.includes(cur)) sel.value = cur;
+}
+function filterData() {
+  const fv2 = $('fFilial').value, fd = $('fData').value, fm = $('fMotorista').value;
+  const fr = $('fRegiao').value, fo = $('fOcorrencia').value, q = norm($('fBusca').value);
+  let V = rowsV(), N = rowsN();
+  if (fv2) {
+    V = V.filter(v => (v['Filial'] || '').toUpperCase() === fv2.toUpperCase());
+    N = N.filter(n => ((n['Filial de Entrega'] || n['Filial']) || '').toUpperCase() === fv2.toUpperCase());
+  }
+  if (fd) { V = V.filter(v => v['Data Entrega'] === fd); N = N.filter(n => n['Data Ocorrência'] === fd || n['Data Últ. Viagem'] === fd || n['Embarque'] === fd); }
+  if (fm) { V = V.filter(v => v['Motorista'] === fm); N = N.filter(n => n['Motorista Últ. Viagem'] === fm || n['Motorista Ocorrência'] === fm); }
+  if (fr) { N = N.filter(n => n['Região'] === fr); }
+  if (fo) { N = N.filter(n => (n['Ocorrência'] || n['Status'] || '') === fo); }
+  if (q) {
+    V = V.filter(v => norm([v['Motorista'], v['Veículo'], v['Setores'], v['Filial']].join(' ')).includes(q));
+    N = N.filter(n => norm([n['NF'], n['Cliente'], n['Destinatário'], n['Cidade'], n['Bairro'], n['Ocorrência'], n['Endereço']].join(' ')).includes(q));
+  }
+  return { V, N };
+}
+
+// ===================== RENDER =====================
+function render() {
+  const { V, N } = filterData();
+  const sumV = V.reduce((a, v) => ({ e: a.e + (+v['Entregas'] || 0), vo: a.vo + (+v['Volumes'] || 0), s: a.s + (+v['Sucessos'] || 0), i: a.i + (+v['Insucessos'] || 0) }), { e: 0, vo: 0, s: 0, i: 0 });
+  const pend = N.filter(n => norm(n['Status']).includes('tentativa') || norm(n['Status']).includes('pend')).length;
+
+  $('kEntregas').textContent = fmtInt(sumV.e);
+  $('kEntregasSub').textContent = V.length + ' viagens \u2022 ' + (V.length ? [...new Set(V.map(v => v['Data Entrega']))].join(' / ') : '\u2013');
+  $('kVolumes').textContent = fmtInt(sumV.vo);
+  $('kVolumesSub').textContent = 'volumes transportados';
+  $('kSucesso').textContent = fmtInt(sumV.s);
+  $('kSucessoSub').textContent = pct(sumV.s, sumV.e) + ' das entregas';
+  $('kInsucesso').textContent = fmtInt(sumV.i);
+  $('kInsucessoSub').textContent = pct(sumV.i, sumV.e) + ' das entregas';
+  const fin = sumV.s + sumV.i;
+  $('kPend').textContent = fmtInt(Math.max(fin ? sumV.e - fin : 0, pend));
+  $('kPendSub').textContent = 'aguardando finaliza\u00e7\u00e3o';
+  $('kTaxa').textContent = pct(sumV.s, fin);
+  $('kTaxaSub').textContent = 'sobre entregas finalizadas';
+
+  const lastSync = S.imports && S.imports.length ? S.imports[S.imports.length - 1] : null;
+  const syncLabel = lastSync && lastSync.file && lastSync.file.includes('Google Sheets') ? ' • conectado ao Google Sheets' : ' • salvo localmente';
+  $('subInfo').textContent = 'Base de ' + fmtInt(rowsV().length + rowsN().length) + ' registros \u2022 \u00faltima atualiza\u00e7\u00e3o: ' +
+    (S.savedAt ? new Date(S.savedAt).toLocaleString('pt-BR') : '\u2013') + syncLabel;
+
+  fillSelect($('fFilial'), [...new Set([...rowsV().map(v => v['Filial']), ...rowsN().map(n => n['Filial de Entrega'] || n['Filial'])].filter(Boolean))].sort(), 'Todas');
+  fillSelect($('fData'), [...new Set(rowsV().map(v => v['Data Entrega']).filter(Boolean))].sort().reverse(), 'Todas');
+  fillSelect($('fMotorista'), [...new Set([...rowsV().map(v => v['Motorista']), ...rowsN().map(n => n['Motorista Últ. Viagem'])].filter(Boolean))].sort(), 'Todos');
+  fillSelect($('fRegiao'), [...new Set(rowsN().map(n => n['Região']).filter(Boolean))].sort(), 'Todas');
+  fillSelect($('fOcorrencia'), [...new Set(rowsN().map(n => n['Ocorrência'] || n['Status']).filter(Boolean))].sort(), 'Todas');
+
+  drawDonut(sumV, fin);
+  drawBars(V);
+  drawHBar(N);
+  fillTableV(V);
+  fillTableN(N);
+  fillImports();
+}
+
+
+// ===================== CHARTS =====================
+const C = { green: '#22c55e', red: '#ef4444', amber: '#f59e0b', blue: '#38bdf8', violet: '#a78bfa', muted: '#8ea2c4', grid: 'rgba(255,255,255,.06)' };
+function baseOpts(extra) {
+  return Object.assign({
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#132038', borderColor: 'rgba(255,255,255,.16)', borderWidth: 1,
+        titleColor: '#e7eefc', bodyColor: '#c7d5f0', padding: 10, displayColors: false
+      }
+    }
+  }, extra || {});
+}
+function killChart(id) { if (typeof Chart === 'undefined') return; if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function drawDonut(sumV, fin) {
+  if (typeof Chart === 'undefined') { $('donutLegend').innerHTML = '<li class="muted">Gráficos indisponíveis (sem internet — CDN Chart.js)</li>'; return; }
+  const open = Math.max(sumV.e - fin, 0);
+  const data = { labels: ['Sucesso', 'Insucesso', 'Em aberto'],
+    datasets: [{ data: [sumV.s, sumV.i, open], backgroundColor: [C.green, C.red, 'rgba(142,162,196,.25)'], borderColor: '#0b1220', borderWidth: 3, hoverOffset: 6 }] };
+  $('donutCenter').querySelector('.big').textContent = pct(sumV.s, fin);
+  $('donutCenter').querySelector('.small').textContent = 'sucesso (finalizadas)';
+  killChart('donut');
+  charts.donut = new Chart($('donut'), { type: 'doughnut', data, options: baseOpts({ cutout: '72%' }) });
+  $('donutLegend').innerHTML = data.labels.map((l, i) =>
+    '<li><span class="dot" style="background:' + data.datasets[0].backgroundColor[i] + '"></span>' + l +
+    '<span class="pct">' + fmtInt(data.datasets[0].data[i]) + ' \u2022 ' + pct(data.datasets[0].data[i], sumV.e) + '</span></li>').join('');
+}
+
+function drawBars(V) {
+  if (typeof Chart === 'undefined') return;
+  const byDay = new Map();
+  V.forEach(v => {
+    const k = v['Data Entrega'] || '\u2013';
+    const o = byDay.get(k) || { e: 0, s: 0, i: 0 };
+    o.e += +v['Entregas'] || 0; o.s += +v['Sucessos'] || 0; o.i += +v['Insucessos'] || 0;
+    byDay.set(k, o);
+  });
+  const days = [...byDay.keys()].sort();
+  $('countDias').textContent = days.length + ' dia(s)';
+  killChart('bars');
+  charts.bars = new Chart($('bars'), { type: 'bar',
+    data: { labels: days, datasets: [
+      { label: 'Sucessos', data: days.map(d => byDay.get(d).s), backgroundColor: C.green, borderRadius: 4, stack: 'st' },
+      { label: 'Insucessos', data: days.map(d => byDay.get(d).i), backgroundColor: C.red, borderRadius: 4, stack: 'st' },
+      { label: 'Em aberto', data: days.map(d => byDay.get(d).e - byDay.get(d).s - byDay.get(d).i), backgroundColor: 'rgba(142,162,196,.35)', borderRadius: 4, stack: 'st' }
+    ]},
+    options: baseOpts({ scales: {
+      x: { stacked: true, grid: { display: false }, ticks: { color: C.muted } },
+      y: { stacked: true, grid: { color: C.grid }, ticks: { color: C.muted }, border: { display: false } }
+    }}) });
+}
+
+function drawHBar(N) {
+  if (typeof Chart === 'undefined') return;
+  const counts = new Map();
+  N.forEach(n => { const k = n['Ocorrência'] || n['Status'] || 'Não informado'; counts.set(k, (counts.get(k) || 0) + 1); });
+  const arr = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  $('countOcorr').textContent = arr.length + ' tipo(s)';
+  killChart('hbar');
+  charts.hbar = new Chart($('hbar'), { type: 'bar',
+    data: { labels: arr.map(x => x[0]), datasets: [{ label: 'Notas', data: arr.map(x => x[1]),
+      backgroundColor: arr.map((x, i) => [C.green, C.red, C.amber, C.blue, C.violet, '#64748b'][i % 6]), borderRadius: 5 }] },
+    options: baseOpts({
+      indexAxis: 'y',
+      onClick: (e, elements) => {
+        if (elements && elements.length) {
+          const idx = elements[0].index;
+          const label = arr[idx][0];
+          $('fOcorrencia').value = label;
+          render();
+        }
+      },
+      scales: {
+        x: { grid: { color: C.grid }, ticks: { color: C.muted, precision: 0 }, border: { display: false } },
+        y: { grid: { display: false }, ticks: { color: C.muted, font: { size: 12 } }, border: { display: false } }
+      }
+    }) });
+}
+
+
+// ===================== TABELAS =====================
+const V_COLS = [['Data Entrega', 'Data'], ['Filial', 'Filial'], ['Motorista', 'Motorista'], ['Nº Viagens', 'Viagem'], ['Veículo', 'Veículo'], ['Setores', 'Setor'], ['Entregas', 'Entregas', 'num'], ['Volumes', 'Volumes', 'num'], ['Sucessos', 'Sucessos', 'num'], ['Insucessos', 'Insucessos', 'num']];
+const N_COLS = [['NF', 'NF'], ['Cliente', 'Cliente'], ['Destinatário', 'Destinatário'], ['Cidade', 'Cidade'], ['Bairro', 'Bairro'], ['Região', 'Região'], ['Filial de Entrega', 'Filial'], ['Status', 'Status', 'tag'], ['Ocorrência', 'Ocorrência', 'tag'], ['Data Ocorrência', 'Data Ocorr.'], ['Data Prazo', 'Prazo'], ['Efetividade', 'Efetividade', 'tag']];
+function statusTag(s) {
+  const n2 = norm(s);
+  if (n2.includes('cancelad') || n2.includes('recus') || n2.includes('devolu')) return ['r', s];
+  if (n2.includes('tentativa')) return ['a', s];
+  if (n2.includes('prazo')) return ['b', s];
+  return ['v', s];
+}
+function fillTableV(V) {
+  const rows2 = [...V];
+  rows2.sort((a, b) => String(a['Data Entrega']).localeCompare(String(b['Data Entrega'])) * (sortReverse ? -1 : 1));
+  $('countViagens').textContent = V.length + ' de ' + rowsV().length;
+  const t = $('tblViagens');
+  t.querySelector('thead').innerHTML = '<tr>' + V_COLS.map(c => '<th' + (c[2] ? ' class="num"' : '') + '>' + c[1] + '</th>').join('') + '</tr>';
+  t.querySelector('tbody').innerHTML = rows2.length ? rows2.map(v =>
+    '<tr>' + V_COLS.map(c => {
+      let x = v[c[0]]; if (c[2] === 'num') return '<td class="num">' + fmtInt(+x || 0) + '</td>';
+      return '<td>' + escHtml(x) + '</td>';
+    }).join('') + '</tr>').join('') : '<tr><td colspan="' + V_COLS.length + '" class="muted" style="text-align:center;padding:18px">Nenhuma viagem com os filtros atuais</td></tr>';
+}
+function fillTableN(N) {
+  $('countNotas').textContent = N.length + ' de ' + rowsN().length;
+  const t = $('tblNotas');
+  t.querySelector('thead').innerHTML = '<tr>' + N_COLS.map(c => '<th>' + c[1] + '</th>').join('') + '</tr>';
+  t.querySelector('tbody').innerHTML = N.length ? N.map(n =>
+    '<tr>' + N_COLS.map(c => {
+      const x = n[c[0]] || '';
+      if (c[2] === 'tag') { const tg = statusTag(x); return '<td><span class="tag ' + tg[0] + '">' + escHtml(x) + '</span></td>'; }
+      return '<td>' + escHtml(x) + '</td>';
+    }).join('') + '</tr>').join('') : '<tr><td colspan="' + N_COLS.length + '" class="muted" style="text-align:center;padding:18px">Nenhuma nota com os filtros atuais</td></tr>';
+}
+function fillImports() {
+  $('countImports').textContent = S.imports.length;
+  const t = $('tblImports');
+  t.querySelector('thead').innerHTML = '<tr><th>Arquivo</th><th>Data</th><th>Viagens novas</th><th>Notas novas</th></tr>';
+  t.querySelector('tbody').innerHTML = S.imports.map(im =>
+    '<tr><td>' + escHtml(im.file) + '</td><td>' + new Date(im.at).toLocaleString('pt-BR') +
+    '</td><td class="num">+' + fmtInt(im.v || 0) + (im.uv ? ' (~' + im.uv + ')' : '') + '</td><td class="num">+' + fmtInt(im.n || 0) + (im.un ? ' (~' + im.un + ')' : '') + '</td></tr>').join('');
+  $('foot').innerHTML = 'Chaves de unicidade \u2014 viagem: data+filial+motorista+n\u00ba viagem+ve\u00edculo+setor; nota: filial-de-entrega+NF. ' +
+    'Hist\u00f3rico completo preservado no navegador; use os bot\u00f5es CSV para baixar os dados filtrados. Filtros: filial, data, motorista, regi\u00e3o, cidade e busca textual.';
+}
+
+
+// ===================== EXPORT CSV (respeita filtros) =====================
+function toCsv(rows, fields) {
+  const head = fields.join(';');
+  const body = rows.map(r => fields.map(f => {
+    let x = r[f]; if (x == null) x = '';
+    x = String(x).replace(/"/g, '""');
+    return /[";\n]/.test(x) ? '"' + x + '"' : x;
+  }).join(';')).join('\r\n');
+  return '\ufeff' + head + '\r\n' + body;
+}
+function download(name, content, mime) {
+  const blob = content instanceof Blob ? content : new Blob([content], { type: mime || 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
+}
+function stamp() { return new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19); }
+$('btnExportV').addEventListener('click', () => {
+  const { V } = filterData();
+  if (!V.length) return toast('\u26a0 Nada para exportar com os filtros atuais', 'err');
+  download('viagens_' + stamp() + '.csv', toCsv(V, S.fv));
+  toast('\u2705 ' + V.length + ' viagens exportadas (CSV)', 'ok');
+});
+$('btnExportN').addEventListener('click', () => {
+  const { N } = filterData();
+  if (!N.length) return toast('\u26a0 Nada para exportar com os filtros atuais', 'err');
+  download('notas_pendentes_' + stamp() + '.csv', toCsv(N, S.fn));
+  toast('\u2705 ' + N.length + ' notas exportadas (CSV)', 'ok');
+});
+
+// ===================== FOTO DO DASHBOARD (PNG + PDF) =====================
+$('btnFoto').addEventListener('click', async function () {
+  const btn = this; btn.disabled = true; const old = btn.innerHTML;
+  btn.innerHTML = '\u23f3 Gerando\u2026';
+  try {
+    const clone = document.querySelector('.wrap').cloneNode(true);
+    clone.style.width = '1280px';
+    clone.querySelectorAll('.btn').forEach(b => b.style.display = 'none');
+    clone.querySelectorAll('.tbl-wrap').forEach(w => { w.style.maxHeight = 'none'; w.style.overflow = 'visible'; });
+    const holder = document.createElement('div');
+    holder.style.cssText = 'position:fixed;left:-99999px;top:0;width:1280px;background:#0b1220';
+    holder.appendChild(clone);
+    document.body.appendChild(holder);
+    try {
+      const canvas = await html2canvas(clone, { backgroundColor: '#0b1220', scale: 2, useCORS: true, logging: false, windowWidth: 1280 });
+      canvas.toBlob(blob => {
+        if (blob) download('dashboard_' + stamp() + '.png', blob, 'image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: [canvas.width / 2, canvas.height / 2] });
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
+        pdf.save('dashboard_' + stamp() + '.pdf');
+        toast('\ud83d\udcf7 Foto do dashboard exportada (PNG + PDF)', 'ok');
+      }, 'image/png');
+    } finally { setTimeout(() => holder.remove(), 3000); }
+  } catch (err) { console.error(err); toast('\u274c Falha na captura: ' + (err.message || err), 'err'); }
+  btn.disabled = false; btn.innerHTML = old;
+});
+
+// ===================== THREE.JS (fundo) =====================
+(function init3D() {
+  if (typeof THREE === 'undefined') return;
+  try {
+    const box = $('bg3d');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 100);
+    camera.position.z = 14;
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(innerWidth, innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    box.appendChild(renderer.domElement);
+    const group = new THREE.Group(); scene.add(group);
+    const N2 = 140;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(N2 * 3);
+    for (let i = 0; i < N2; i++) {
+      pos[i * 3] = (Math.random() - .5) * 30;
+      pos[i * 3 + 1] = (Math.random() - .5) * 18;
+      pos[i * 3 + 2] = (Math.random() - .5) * 14;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({ color: 0x38bdf8, size: 0.12, transparent: true, opacity: .55 });
+    group.add(new THREE.Points(geo, mat));
+    const grid = new THREE.GridHelper(60, 40, 0x1e3a5f, 0x122036);
+    grid.position.set(0, -7, -6); grid.rotation.x = 0.06;
+    grid.material.transparent = true; grid.material.opacity = .5;
+    scene.add(grid);
+    const grid2 = grid.clone(); grid2.position.set(0, 7.5, -6); grid2.rotation.x = Math.PI + 0.06; scene.add(grid2);
+    (function loop(t) {
+      group.rotation.y = Math.sin(t * 0.00008) * 0.25;
+      group.position.y = Math.sin(t * 0.0003) * 0.6;
+      grid.material.opacity = .35 + Math.sin(t * 0.0005) * .15;
+      renderer.render(scene, camera);
+      requestAnimationFrame(loop);
+    })(0);
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+  } catch (e) { console.warn('3D off', e); }
+})();
+
+</script>
+<script>
+// ===================== BOOT =====================
+document.addEventListener('DOMContentLoaded', function () {
+  S = loadState();
+  if (!S.fv || !S.fn || !S.imports) { S = structuredClone ? structuredClone(DEFAULT_SEED) : JSON.parse(JSON.stringify(DEFAULT_SEED)); }
+  render();
+  const clears = ['fFilial', 'fData', 'fMotorista', 'fRegiao', 'fOcorrencia', 'fBusca'];
+  clears.forEach(id2 => $(id2).addEventListener('change', render));
+  $('fBusca').addEventListener('input', render);
+  $('btnClear').addEventListener('click', () => { clears.forEach(id2 => $(id2).value = ''); render(); });
+  $('btnSortV').addEventListener('click', () => { sortReverse = !sortReverse; fillTableV(filterData().V); });
+  $('btnSyncSheets').addEventListener('click', () => syncGoogleSheets(true));
+  // Sincronização automática em segundo plano
+  setTimeout(() => syncGoogleSheets(false), 600);
+});
+</script>
+</body>
+</html>
+

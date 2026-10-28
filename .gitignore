@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Ambiente / credenciais
+.env
+
+# Logs
+*.log
+
+# Relatórios gerados (dados de execução)
+*.xlsx
+
+# Sistema operacional
+Thumbs.db
+.DS_Store
