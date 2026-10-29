@@ -4,7 +4,7 @@ pelo mesmo Apps Script Web App usado nas pendências.
 
 Uso:
     py enviar_viagens.py [caminho_do_arquivo.xlsx]
-Sem argumento, usa o relatorioResumoViagens*.xlsx mais recente na pasta.
+Sem argumento, usa o arquivo de resumo de viagens mais recente na pasta ou em outputs/.
 """
 import glob
 import os
@@ -44,17 +44,26 @@ def _detectar_header(arq: Path) -> int:
 
 def main():
     _carregar_env()
-    url = os.environ.get("SHEETS_WEBAPP_URL", "")
-    token = os.environ.get("SHEETS_WEBAPP_TOKEN", "")
+    url = os.environ.get("SHEETS_WEBAPP_URL", "").strip()
+    token = os.environ.get("SHEETS_WEBAPP_TOKEN", "").strip()
     if not url or not token:
         raise SystemExit("Defina SHEETS_WEBAPP_URL e SHEETS_WEBAPP_TOKEN no .env")
 
     if len(sys.argv) > 1:
         arq = Path(sys.argv[1])
     else:
-        hits = sorted(glob.glob("relatorioResumoViagens*.xlsx"), reverse=True)
+        padroes = [
+            "relatorioResumoViagens*.xlsx",
+            "resumo_viagens*.xlsx",
+            "outputs/**/resumo_viagens*.xlsx",
+            "outputs/**/relatorioResumoViagens*.xlsx",
+        ]
+        hits = []
+        for p in padroes:
+            hits.extend(glob.glob(p, recursive=True))
+        hits = sorted(hits, reverse=True)
         if not hits:
-            raise SystemExit("Nenhum relatorioResumoViagens*.xlsx encontrado.")
+            raise SystemExit("Nenhum arquivo de resumo de viagens (.xlsx) encontrado.")
         arq = Path(hits[0])
 
     print(f"Lendo: {arq.name}", flush=True)

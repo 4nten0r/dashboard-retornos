@@ -433,7 +433,7 @@ async function syncGoogleSheets(manual = false) {
     const mn = mergeInto(rowsN(), inc.notas, notaKey);
     S.v = mv.rows.map(o => S.fv.map(k => o[k] == null ? '' : o[k]));
     S.n = mn.rows.map(o => S.fn.map(k => o[k] == null ? '' : o[k]));
-    S.imports.push({
+    if (mv.added > 0 || mn.added > 0 || mv.updated > 0 || mn.updated > 0 || !S.imports.some(im => im.file && im.file.includes('Google Sheets'))) S.imports.push({
       file: 'Google Sheets (Nuvem)',
       at: new Date().toISOString(),
       v: mv.added,
@@ -444,7 +444,10 @@ async function syncGoogleSheets(manual = false) {
     saveState();
     render();
 
-    toast(`✅ Google Sheets sincronizado (+${mv.added} viagens, +${mn.added} notas)`, 'ok');
+    const hasChanges = (mv.added > 0 || mn.added > 0 || mv.updated > 0 || mn.updated > 0);
+    if (manual || hasChanges) {
+      toast(`✅ Google Sheets sincronizado (+${mv.added} viagens, +${mn.added} notas)`, 'ok');
+    }
   } catch (err) {
     console.error('Falha na sincronização Google Sheets:', err);
     if (manual) {
