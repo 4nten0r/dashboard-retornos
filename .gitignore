@@ -11,8 +11,12 @@ venv/
 # Logs
 *.log
 
-# Relatórios gerados (dados de execução)
+# Relatórios e capturas gerados na execução
 *.xlsx
+outputs/
+
+# Editor / IDE
+.vscode/
 
 # Sistema operacional
 Thumbs.db
