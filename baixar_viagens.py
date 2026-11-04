@@ -19,7 +19,7 @@ import asyncio
 import io
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 # Garante saida UTF-8 no terminal Windows
@@ -79,7 +79,7 @@ WEBAPP_URL   = os.environ.get("SHEETS_WEBAPP_URL", "")
 WEBAPP_TOKEN = os.environ.get("SHEETS_WEBAPP_TOKEN", "")
 
 # ── Data e pasta de saida ─────────────────────────────────────────────────────
-HOJE = datetime.today()
+HOJE = datetime.today() - timedelta(days=1)  # Dia anterior (automação alimenta com dados do dia anterior)
 PASTA_SAIDA = Path("outputs") / "viagens" / HOJE.strftime("%Y-%m-%d")
 
 # ── True = sem janela (usar apos estavel); False = browser visivel (debug) ────
