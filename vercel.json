@@ -1,8 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "installCommand": "cd logistics-dashboard && npm install",
-  "buildCommand": "cd logistics-dashboard && npm run build",
-  "outputDirectory": "logistics-dashboard/.next",
   "regions": ["gru1"]
 }
