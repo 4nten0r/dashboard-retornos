@@ -7,6 +7,15 @@ venv/
 
 # Ambiente / credenciais
 .env
+.env*.local
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/
+dist/
+.vercel
 
 # Logs
 *.log
@@ -17,7 +26,12 @@ outputs/
 
 # Editor / IDE
 .vscode/
+.idea/
 
 # Sistema operacional
 Thumbs.db
 .DS_Store
+
+# Temporários e backups
+_*.txt
+*.bak

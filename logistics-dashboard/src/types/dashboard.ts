@@ -32,11 +32,32 @@ export interface ReturnReasonData {
   percentage: number;
 }
 
+export interface FilialVolumeData {
+  name: string;
+  entregas: number;
+  volumes: number;
+}
+
+export interface OcorrenciaEntregaData {
+  nf: string;
+  filial: string;
+  motorista: string;
+  data: string;
+  volumes: number;
+  ocorrencia: string;
+  cidade?: string;
+  regiao?: string;
+}
+
 export interface DashboardData {
   kpis: KPIMetric[];
   otifTimeSeries: TimeSeriesData[];
   topCarriersDelay: CarrierData[];
   returnReasons: ReturnReasonData[];
+  entregasPorFilial: FilialVolumeData[];
+  entregasPorMotorista: FilialVolumeData[];
+  totalVolumes: number;
+  entregasComOcorrencia: OcorrenciaEntregaData[];
   period: string;
 }
 

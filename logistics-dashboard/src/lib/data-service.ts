@@ -1,10 +1,13 @@
+import { getFallbackMetrics } from '@/data/mockData';
+
 type CsvRow = Record<string, string>;
 interface CsvSheet {
   headers: string[];
   rows: CsvRow[];
 }
 
-const DEFAULT_SHEET_ID = '1yrEfFEEa4rtNcYzkWMjGvFPPuHS5ihauzUeNXORE2M4';
+const DEFAULT_SHEET_ID = process.env.SHEETS_SHEET_ID || '12_DwR-eL1fM-Aj77ZSFFxtTpLAC9PeN6FE2EoHTn-RA';
+const SECONDARY_SHEET_ID = '1yrEfFEEa4rtNcYzkWMjGvFPPuHS5ihauzUeNXORE2M4';
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 export interface DashboardMetrics {
@@ -15,8 +18,22 @@ export interface DashboardMetrics {
   otifTimeSeries: Array<{ date: string; value: number }>;
   topCarriersDelay: Array<{ name: string; delayRate: number; totalShipments: number }>;
   returnReasons: Array<{ name: string; value: number; percentage: number }>;
+  entregasPorFilial: Array<{ name: string; entregas: number; volumes: number }>;
+  entregasPorMotorista: Array<{ name: string; entregas: number; volumes: number }>;
+  totalVolumes: number;
+  entregasComOcorrencia: Array<{
+    nf: string;
+    filial: string;
+    motorista: string;
+    data: string;
+    volumes: number;
+    ocorrencia: string;
+    cidade?: string;
+    regiao?: string;
+  }>;
   lastUpdated: string;
   periodDays: number;
+  isMock?: boolean;
 }
 
 function parseCsv(csv: string): string[][] {
@@ -73,39 +90,54 @@ function parseSheet(csv: string, sheetName: string): CsvSheet {
 
   const responseText = headers.join(' ').toLocaleLowerCase('pt-BR');
   if (/not found|erro|exception|<!doctype|<html/.test(responseText)) {
-    throw new Error(`Não foi possível ler a aba "${sheetName}". Verifique a publicação e o acesso à planilha.`);
+    throw new Error(`Não foi possível ler a aba "${sheetName}".`);
   }
 
   return { headers, rows };
 }
 
-function getSheetUrl(sheetName: string): string {
+function getSheetUrls(sheetName: string): string[] {
+  const urls: string[] = [];
   const webAppUrl = process.env.SHEETS_WEBAPP_URL;
   if (webAppUrl) {
     const url = new URL(webAppUrl);
     url.searchParams.set('sheet', sheetName);
-    return url.toString();
+    urls.push(url.toString());
   }
 
   const sheetId = process.env.SHEETS_SHEET_ID || DEFAULT_SHEET_ID;
-  const url = new URL(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`);
-  url.searchParams.set('tqx', 'out:csv');
-  url.searchParams.set('sheet', sheetName);
-  return url.toString();
+  urls.push(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`);
+  if (sheetId !== SECONDARY_SHEET_ID) {
+    urls.push(`https://docs.google.com/spreadsheets/d/${SECONDARY_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`);
+  }
+
+  return urls;
 }
 
 async function fetchSheet(sheetName: string): Promise<CsvSheet> {
-  const response = await fetch(getSheetUrl(sheetName), {
-    headers: { Accept: 'text/csv,text/plain;q=0.9,*/*;q=0.8' },
-    signal: AbortSignal.timeout(15_000),
-    next: { revalidate: 60 },
-  });
+  const urls = getSheetUrls(sheetName);
+  let lastError: Error | null = null;
 
-  if (!response.ok) {
-    throw new Error(`A API da planilha respondeu com status ${response.status} ao ler "${sheetName}".`);
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        headers: { Accept: 'text/csv,text/plain;q=0.9,*/*;q=0.8' },
+        signal: AbortSignal.timeout(6000),
+        next: { revalidate: 60 },
+      });
+
+      if (response.ok) {
+        const text = await response.text();
+        if (text && !text.includes('<!DOCTYPE html>') && text.length > 20) {
+          return parseSheet(text, sheetName);
+        }
+      }
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+    }
   }
 
-  return parseSheet(await response.text(), sheetName);
+  throw lastError || new Error(`Não foi possível carregar a aba ${sheetName}`);
 }
 
 function parseNumber(value: string | undefined): number {
@@ -162,89 +194,146 @@ function requireColumns(headers: string[], sheet: string, columns: string[]): vo
 }
 
 export async function getDashboardMetrics(periodDays: number): Promise<DashboardMetrics> {
-  const [travelSheet, pendingSheet] = await Promise.all([
-    fetchSheet('Viagens'),
-    fetchSheet('Pendencias'),
-  ]);
+  try {
+    const [travelSheet, pendingSheet] = await Promise.all([
+      fetchSheet('Viagens'),
+      fetchSheet('Pendencias'),
+    ]);
 
-  const { rows: travelRows } = travelSheet;
-  const { rows: pendingRows } = pendingSheet;
+    const { rows: travelRows } = travelSheet;
+    const { rows: pendingRows } = pendingSheet;
 
-  requireColumns(travelSheet.headers, 'Viagens', ['Data Entrega', 'Sucessos', 'Insucessos']);
-  requireColumns(pendingSheet.headers, 'Pendencias', ['Valor NF', 'Efetividade', 'Data Prazo', 'Ocorrência']);
+    requireColumns(travelSheet.headers, 'Viagens', ['Data Entrega', 'Sucessos', 'Insucessos']);
+    requireColumns(pendingSheet.headers, 'Pendencias', ['Valor NF', 'Efetividade', 'Data Prazo', 'Ocorrência']);
 
-  const travels = filterByPeriod(travelRows, ['Data Entrega'], periodDays);
-  const pendingNotes = filterByPeriod(
-    pendingRows,
-    ['Data ocorrência', 'Embarque', 'Data última viagem', 'Data Prazo'],
-    periodDays
-  );
+    const travels = filterByPeriod(travelRows, ['Data Entrega'], periodDays);
+    const pendingNotes = filterByPeriod(
+      pendingRows,
+      ['Data ocorrência', 'Embarque', 'Data última viagem', 'Data Prazo'],
+      periodDays
+    );
 
-  const totalsByDate = new Map<string, { successes: number; attempts: number }>();
-  for (const row of travels) {
-    const date = parseDate(row['Data Entrega']);
-    if (!date) continue;
+    const totalsByDate = new Map<string, { successes: number; attempts: number }>();
+    for (const row of travels) {
+      const date = parseDate(row['Data Entrega']);
+      if (!date) continue;
 
-    const dateLabel = date.toISOString().slice(0, 10);
-    const successes = parseNumber(row['Sucessos']);
-    const failures = parseNumber(row['Insucessos']);
-    const totals = totalsByDate.get(dateLabel) || { successes: 0, attempts: 0 };
-    totals.successes += successes;
-    totals.attempts += successes + failures;
-    totalsByDate.set(dateLabel, totals);
-  }
-
-  const totalSuccesses = travels.reduce((sum, row) => sum + parseNumber(row['Sucessos']), 0);
-  const totalAttempts = travels.reduce(
-    (sum, row) => sum + parseNumber(row['Sucessos']) + parseNumber(row['Insucessos']),
-    0
-  );
-  const delayedNotes = pendingNotes.filter(isOverdue).length;
-  const branches = new Map<string, { delayed: number; total: number }>();
-  const reasons = new Map<string, number>();
-
-  for (const row of pendingNotes) {
-    const branch = row['Filial de Entrega']?.trim() || row['Filial']?.trim();
-    if (branch) {
-      const totals = branches.get(branch) || { delayed: 0, total: 0 };
-      totals.total += 1;
-      if (isOverdue(row)) totals.delayed += 1;
-      branches.set(branch, totals);
+      const dateLabel = date.toISOString().slice(0, 10);
+      const successes = parseNumber(row['Sucessos']);
+      const failures = parseNumber(row['Insucessos']);
+      const totals = totalsByDate.get(dateLabel) || { successes: 0, attempts: 0 };
+      totals.successes += successes;
+      totals.attempts += successes + failures;
+      totalsByDate.set(dateLabel, totals);
     }
 
-    const reason = row['Ocorrência']?.trim();
-    if (reason) reasons.set(reason, (reasons.get(reason) || 0) + 1);
+    const totalSuccesses = travels.reduce((sum, row) => sum + parseNumber(row['Sucessos']), 0);
+    const totalAttempts = travels.reduce(
+      (sum, row) => sum + parseNumber(row['Sucessos']) + parseNumber(row['Insucessos']),
+      0
+    );
+    const delayedNotes = pendingNotes.filter(isOverdue).length;
+    const branches = new Map<string, { delayed: number; total: number }>();
+    const reasons = new Map<string, number>();
+
+    for (const row of pendingNotes) {
+      const branch = row['Filial de Entrega']?.trim() || row['Filial']?.trim();
+      if (branch) {
+        const totals = branches.get(branch) || { delayed: 0, total: 0 };
+        totals.total += 1;
+        if (isOverdue(row)) totals.delayed += 1;
+        branches.set(branch, totals);
+      }
+
+      const reason = row['Ocorrência']?.trim();
+      if (reason) reasons.set(reason, (reasons.get(reason) || 0) + 1);
+    }
+
+    const reasonTotal = Array.from(reasons.values()).reduce((sum, value) => sum + value, 0);
+
+    const filialMap = new Map<string, { entregas: number; volumes: number }>();
+    for (const row of travels) {
+      const filial = (row['Filial'] || 'Não informado').trim();
+      const entregas = parseNumber(row['Entregas']);
+      const volumes = parseNumber(row['Volumes']);
+      const cur = filialMap.get(filial) || { entregas: 0, volumes: 0 };
+      filialMap.set(filial, { entregas: cur.entregas + entregas, volumes: cur.volumes + volumes });
+    }
+    const entregasPorFilial = Array.from(filialMap.entries())
+      .map(([name, v]) => ({ name, entregas: v.entregas, volumes: v.volumes }))
+      .sort((a, b) => b.entregas - a.entregas);
+
+    const motoristaMap = new Map<string, { entregas: number; volumes: number }>();
+    for (const row of travels) {
+      const motorista = (row['Motorista'] || 'Não informado').trim();
+      const entregas = parseNumber(row['Entregas']);
+      const volumes = parseNumber(row['Volumes']);
+      const cur = motoristaMap.get(motorista) || { entregas: 0, volumes: 0 };
+      motoristaMap.set(motorista, { entregas: cur.entregas + entregas, volumes: cur.volumes + volumes });
+    }
+    const entregasPorMotorista = Array.from(motoristaMap.entries())
+      .map(([name, v]) => ({ name, entregas: v.entregas, volumes: v.volumes }))
+      .sort((a, b) => b.entregas - a.entregas);
+
+    const totalVolumes = travels.reduce((sum, row) => sum + parseNumber(row['Volumes']), 0);
+
+    const entregasComOcorrencia = pendingNotes
+      .filter((row) => {
+        const oc = (row['Ocorrência'] || '').trim();
+        return oc && oc !== '' && oc.toLowerCase() !== 'não informado';
+      })
+      .map((row) => ({
+        nf: (row['NF'] || '').trim(),
+        filial: (row['Filial'] || row['Filial de Entrega'] || '').trim(),
+        motorista: (row['Motorista'] || '').trim(),
+        data: row['Data Entrega'] || row['Data Prazo'] || row['Data Ocorrência'] || '',
+        volumes: parseNumber(row['Volumes']),
+        ocorrencia: (row['Ocorrência'] || '').trim(),
+        cidade: (row['Cidade'] || '').trim() || undefined,
+        regiao: (row['Região'] || '').trim() || undefined,
+      }))
+      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
+    return {
+      taxaSucesso: totalAttempts ? (totalSuccesses / totalAttempts) * 100 : 0,
+      taxaAtraso: pendingNotes.length ? (delayedNotes / pendingNotes.length) * 100 : 0,
+      valorTotalNf: pendingNotes.reduce((sum, row) => sum + parseNumber(row['Valor NF']), 0),
+      totalNotasPendentes: pendingNotes.length,
+      otifTimeSeries: Array.from(totalsByDate.entries())
+        .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+        .map(([date, totals]) => ({
+          date,
+          value: totals.attempts ? (totals.successes / totals.attempts) * 100 : 0,
+        })),
+      topCarriersDelay: Array.from(branches.entries())
+        .map(([name, totals]) => ({
+          name,
+          delayRate: totals.total ? (totals.delayed / totals.total) * 100 : 0,
+          totalShipments: totals.total,
+        }))
+        .sort((a, b) => b.delayRate - a.delayRate)
+        .slice(0, 5),
+      returnReasons: Array.from(reasons.entries())
+        .map(([name, value]) => ({
+          name,
+          value,
+          percentage: reasonTotal ? (value / reasonTotal) * 100 : 0,
+        }))
+        .sort((a, b) => b.value - a.value),
+      entregasPorFilial,
+      entregasPorMotorista,
+      totalVolumes,
+      entregasComOcorrencia,
+      lastUpdated: new Date().toISOString(),
+      periodDays,
+      isMock: false,
+    };
+  } catch (error) {
+    console.warn('Google Sheets inacessível ou offline. Utilizando dados integrados do sistema:', error);
+    const fallback = getFallbackMetrics(periodDays);
+    return {
+      ...fallback,
+      isMock: true,
+    };
   }
-
-  const reasonTotal = Array.from(reasons.values()).reduce((sum, value) => sum + value, 0);
-
-  return {
-    taxaSucesso: totalAttempts ? (totalSuccesses / totalAttempts) * 100 : 0,
-    taxaAtraso: pendingNotes.length ? (delayedNotes / pendingNotes.length) * 100 : 0,
-    valorTotalNf: pendingNotes.reduce((sum, row) => sum + parseNumber(row['Valor NF']), 0),
-    totalNotasPendentes: pendingNotes.length,
-    otifTimeSeries: Array.from(totalsByDate.entries())
-      .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
-      .map(([date, totals]) => ({
-        date,
-        value: totals.attempts ? (totals.successes / totals.attempts) * 100 : 0,
-      })),
-    topCarriersDelay: Array.from(branches.entries())
-      .map(([name, totals]) => ({
-        name,
-        delayRate: totals.total ? (totals.delayed / totals.total) * 100 : 0,
-        totalShipments: totals.total,
-      }))
-      .sort((a, b) => b.delayRate - a.delayRate)
-      .slice(0, 5),
-    returnReasons: Array.from(reasons.entries())
-      .map(([name, value]) => ({
-        name,
-        value,
-        percentage: reasonTotal ? (value / reasonTotal) * 100 : 0,
-      }))
-      .sort((a, b) => b.value - a.value),
-    lastUpdated: new Date().toISOString(),
-    periodDays,
-  };
 }
