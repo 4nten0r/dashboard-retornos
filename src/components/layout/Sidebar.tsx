@@ -61,12 +61,12 @@ export function Sidebar({ open, showPending, showOccurrences, onNavigate }: Side
   return (
     <aside
       className={cn(
-        'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/70 bg-[#eaf0f6]/95 px-4 py-5 shadow-[10px_0_30px_rgba(114,132,154,0.12)] backdrop-blur-xl transition-transform duration-300 lg:translate-x-0',
+        'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/70 bg-[#e1eceb]/95 px-4 py-5 shadow-[10px_0_30px_rgba(75,111,111,0.12)] backdrop-blur-xl transition-transform duration-300 lg:translate-x-0',
         open ? 'translate-x-0' : '-translate-x-full'
       )}
     >
       <Link href="#visao-geral" onClick={onNavigate} className="mb-9 flex items-center gap-3 px-2">
-        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eaf0f6] text-sky-600 shadow-[5px_5px_10px_#cbd4df,-5px_-5px_10px_#ffffff]">
+        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#e4efee] text-teal-700 shadow-[5px_5px_10px_#bfd1cf,-5px_-5px_10px_#f8fcfb]">
           <Truck className="h-5 w-5" />
         </span>
         <span>
@@ -93,14 +93,14 @@ export function Sidebar({ open, showPending, showOccurrences, onNavigate }: Side
               className={cn(
                 'group flex items-center gap-3 rounded-xl px-3.5 py-3 text-[13px] font-semibold transition-all duration-200',
                 isActive
-                  ? 'bg-[#eaf0f6] text-sky-700 shadow-[inset_3px_3px_7px_#cbd4df,inset_-3px_-3px_7px_#ffffff]'
-                  : 'text-slate-500 hover:bg-white/65 hover:text-slate-800 hover:shadow-[3px_3px_8px_rgba(180,192,207,0.45),-3px_-3px_8px_#fff]'
+                  ? 'bg-[#e4efee] text-teal-800 shadow-[inset_3px_3px_7px_#bfd1cf,inset_-3px_-3px_7px_#f8fcfb]'
+                  : 'text-slate-600 hover:bg-white/65 hover:text-slate-800 hover:shadow-[3px_3px_8px_rgba(165,190,188,0.45),-3px_-3px_8px_#fff]'
               )}
             >
               <Icon
                 className={cn(
                   'h-[18px] w-[18px] transition-transform duration-200 group-hover:scale-110',
-                  isActive ? 'text-sky-600' : 'text-slate-400'
+                  isActive ? 'text-teal-700' : 'text-slate-400'
                 )}
               />
               {item.name}

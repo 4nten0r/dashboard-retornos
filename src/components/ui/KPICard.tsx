@@ -52,7 +52,7 @@ export function KPICard({
       onPointerLeave={resetPointer}
       aria-pressed={active}
       className={cn(
-        'neo-kpi group relative min-w-0 overflow-hidden rounded-[1.35rem] border border-white/80 p-5 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2',
+        'neo-kpi group relative flex min-h-[156px] min-w-0 flex-col overflow-hidden rounded-[1.35rem] border border-white/80 p-4 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 sm:p-5',
         active && 'neo-kpi-active'
       )}
       style={{ transform: 'perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg))' }}
@@ -61,28 +61,30 @@ export function KPICard({
         className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         style={{
           background:
-            'radial-gradient(260px circle at var(--pointer-x, 50%) var(--pointer-y, 50%), rgba(255,255,255,0.82), transparent 70%)',
+            'radial-gradient(260px circle at var(--pointer-x, 50%) var(--pointer-y, 50%), rgba(255,255,255,0.72), transparent 70%)',
         }}
       />
-      <span className="relative flex items-start justify-between gap-3">
+      <span className="relative flex min-w-0 items-start justify-between gap-3">
         <span className="min-w-0">
-          <span className="block truncate text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
+          <span className="line-clamp-2 min-h-8 text-[10px] font-bold uppercase leading-4 tracking-[0.1em] text-slate-500 sm:text-[11px]">
             {label}
           </span>
-          <span className="mt-3 block truncate text-[1.65rem] font-extrabold leading-none tracking-tight text-slate-800 tabular-nums sm:text-[1.85rem]">
+          <span className="mt-2 block break-words text-[clamp(1.25rem,2vw,1.75rem)] font-extrabold leading-tight tracking-tight text-slate-800 tabular-nums">
             {value}
           </span>
         </span>
         <span
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#eaf0f6] shadow-[5px_5px_10px_#cbd4df,-5px_-5px_10px_#ffffff] transition duration-300 group-hover:-translate-y-1 group-hover:scale-105 group-hover:shadow-[inset_3px_3px_7px_#cbd4df,inset_-3px_-3px_7px_#ffffff]"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#e4efee] shadow-[5px_5px_10px_#bfd1cf,-5px_-5px_10px_#f8fcfb] transition duration-300 group-hover:-translate-y-1 group-hover:scale-105 group-hover:shadow-[inset_3px_3px_7px_#bfd1cf,inset_-3px_-3px_7px_#f8fcfb] sm:h-11 sm:w-11"
           style={{ color: accent }}
         >
           {icon || <Target className="h-5 w-5" />}
         </span>
       </span>
-      <span className="relative mt-4 flex min-h-5 items-center justify-between gap-2">
-        <span className="truncate text-[11px] font-medium text-slate-500">{description}</span>
-        <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-slate-300 transition duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-sky-600" />
+      <span className="relative mt-auto flex min-w-0 items-start justify-between gap-2 pt-3">
+        <span className="line-clamp-2 min-w-0 break-words text-[11px] font-medium leading-4 text-slate-600">
+          {description}
+        </span>
+        <ArrowUpRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400 transition duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-teal-700" />
       </span>
       <span
         className="absolute bottom-0 left-5 right-5 h-[2px] origin-left scale-x-0 rounded-full transition-transform duration-300 group-hover:scale-x-100"

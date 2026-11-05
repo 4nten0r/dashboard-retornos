@@ -122,5 +122,12 @@ export function CarrierDelayBarChart({ data, height = 320 }: CarrierDelayBarChar
     ],
   };
 
-  return <ChartCard title="Filiais com maior índice de pendências atrasadas" option={option} height={height} />;
+  return (
+    <ChartCard
+      title="Filiais com maior índice de pendências atrasadas"
+      subtitle="Percentual de notas atrasadas em cada filial."
+      option={option}
+      height={height}
+    />
+  );
 }

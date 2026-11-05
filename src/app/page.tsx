@@ -45,7 +45,7 @@ function formatNumber(value: number): string {
 
 function EmptyPanel({ message }: { message: string }) {
   return (
-    <div className="neo-card flex min-h-40 flex-col items-center justify-center rounded-[1.4rem] border border-white/70 p-6 text-center">
+    <div className="neo-card flex min-h-60 flex-col items-center justify-center rounded-[1.4rem] border border-white/70 p-6 text-center">
       <Activity className="mb-3 h-6 w-6 text-slate-300" />
       <p className="text-sm font-semibold text-slate-500">{message}</p>
     </div>
@@ -149,11 +149,11 @@ export default function DashboardPage() {
     >
       <div className="space-y-7" id="visao-geral">
         <section className="neo-card relative overflow-hidden rounded-[1.65rem] border border-white/80 p-5 sm:p-7">
-          <div className="pointer-events-none absolute -right-20 -top-32 h-72 w-72 rounded-full bg-sky-200/30 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-36 right-1/3 h-64 w-64 rounded-full bg-indigo-200/20 blur-3xl" />
+          <div className="pointer-events-none absolute -right-20 -top-32 h-72 w-72 rounded-full bg-teal-200/30 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-36 right-1/3 h-64 w-64 rounded-full bg-cyan-200/20 blur-3xl" />
           <div className="relative flex flex-col justify-between gap-6 xl:flex-row xl:items-end">
             <div className="max-w-3xl">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-sky-700 shadow-sm">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-teal-800 shadow-sm">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
@@ -187,12 +187,12 @@ export default function DashboardPage() {
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <label className="relative flex min-w-48 items-center">
-                <Building2 className="pointer-events-none absolute left-3.5 h-4 w-4 text-sky-600" />
+                <Building2 className="pointer-events-none absolute left-3.5 h-4 w-4 text-teal-700" />
                 <select
                   value={selectedBranch}
                   onChange={(event) => setSelectedBranch(event.target.value)}
                   aria-label="Filtrar por filial"
-                  className="w-full appearance-none rounded-xl border border-white/90 bg-[#eaf0f6] py-3 pl-10 pr-10 text-xs font-semibold text-slate-700 shadow-[inset_3px_3px_7px_#d0d9e3,inset_-3px_-3px_7px_#ffffff] outline-none transition focus:ring-2 focus:ring-sky-500/30"
+                  className="w-full appearance-none rounded-xl border border-white/90 bg-[#e4efee] py-3 pl-10 pr-10 text-xs font-semibold text-slate-700 shadow-[inset_3px_3px_7px_#bfd1cf,inset_-3px_-3px_7px_#f8fcfb] outline-none transition focus:ring-2 focus:ring-teal-600/30"
                   disabled={!metrics?.availableBranches.length}
                 >
                   <option value="">Todas as filiais</option>
@@ -202,13 +202,13 @@ export default function DashboardPage() {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="pointer-events-none absolute right-3.5 h-4 w-4 text-slate-400" />
+                <ChevronDown className="pointer-events-none absolute right-3.5 h-4 w-4 text-slate-500" />
               </label>
               <button
                 type="button"
                 onClick={() => void fetchMetrics(true)}
                 disabled={isRefreshing || loading}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/90 bg-[#eaf0f6] px-4 py-3 text-xs font-bold text-slate-600 shadow-[5px_5px_10px_#cbd4df,-5px_-5px_10px_#ffffff] transition hover:-translate-y-0.5 hover:text-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/90 bg-[#e4efee] px-4 py-3 text-xs font-bold text-slate-700 shadow-[5px_5px_10px_#bfd1cf,-5px_-5px_10px_#f8fcfb] transition hover:-translate-y-0.5 hover:text-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 Atualizar
@@ -217,7 +217,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => metrics && downloadCsv(metrics)}
                 disabled={!metrics || loading}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-xs font-bold text-white shadow-[0_8px_18px_rgba(2,132,199,0.22)] transition hover:-translate-y-0.5 hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-3 text-xs font-bold text-white shadow-[0_8px_18px_rgba(43,116,119,0.22)] transition hover:-translate-y-0.5 hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <ArrowDownToLine className="h-4 w-4" />
                 Exportar CSV
@@ -230,7 +230,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setSelectedBranch('')}
-                className="rounded-full bg-sky-50 px-3 py-1 font-semibold text-sky-700 transition hover:bg-sky-100"
+                className="rounded-full bg-teal-50 px-3 py-1 font-semibold text-teal-800 transition hover:bg-teal-100"
               >
                 {selectedBranch} <span aria-hidden="true">×</span>
               </button>
@@ -240,7 +240,7 @@ export default function DashboardPage() {
 
         {loading && (
           <div className="space-y-7" aria-label="Carregando indicadores">
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
               {Array.from({ length: 5 }, (_, index) => (
                 <div
                   key={index}
@@ -248,7 +248,7 @@ export default function DashboardPage() {
                 />
               ))}
             </div>
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 2xl:grid-cols-2">
               {Array.from({ length: 4 }, (_, index) => (
                 <div key={index} className="neo-card h-96 animate-pulse rounded-[1.4rem]" />
               ))}
@@ -279,8 +279,8 @@ export default function DashboardPage() {
         {!loading && metrics && !error && (
           <>
             <section
-              className={`grid grid-cols-1 gap-5 sm:grid-cols-2 ${
-                hasPendingSheet ? 'xl:grid-cols-5' : 'xl:grid-cols-4'
+              className={`grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 ${
+                hasPendingSheet ? '2xl:grid-cols-5' : '2xl:grid-cols-4'
               }`}
               aria-label="Indicadores-chave de desempenho"
             >
@@ -295,7 +295,7 @@ export default function DashboardPage() {
                     : 'Sem tentativas registradas'
                 }
                 icon={<PackageCheck className="h-5 w-5" />}
-                accent="#059669"
+                accent="#4f8d7d"
                 active={activeKpi === 'success'}
                 onClick={() => scrollToSection('entregas', 'success')}
               />
@@ -305,7 +305,7 @@ export default function DashboardPage() {
                   value={formatCurrency(metrics.valorTotalNf)}
                   description={`${formatNumber(metrics.totalNotasPendentes)} nota(s) em aberto`}
                   icon={<DollarSign className="h-5 w-5" />}
-                  accent="#0284c7"
+                  accent="#3f8588"
                   active={activeKpi === 'pending'}
                   onClick={() => scrollToSection('pendencias', 'pending')}
                 />
@@ -315,7 +315,7 @@ export default function DashboardPage() {
                 value={topBranch ? `${formatNumber(topBranch.entregas)} ent.` : '0'}
                 description={topBranch?.name || 'Sem dados no período'}
                 icon={<Building2 className="h-5 w-5" />}
-                accent="#6366f1"
+                accent="#657e9a"
                 active={activeKpi === 'branch'}
                 onClick={() => scrollToSection('filiais', 'branch')}
               />
@@ -324,7 +324,7 @@ export default function DashboardPage() {
                 value={topDriver ? `${formatNumber(topDriver.entregas)} ent.` : '0'}
                 description={topDriver?.name || 'Sem dados no período'}
                 icon={<UserRound className="h-5 w-5" />}
-                accent="#d97706"
+                accent="#b28a52"
                 active={activeKpi === 'driver'}
                 onClick={() => scrollToSection('motoristas', 'driver')}
               />
@@ -333,7 +333,7 @@ export default function DashboardPage() {
                 value={formatNumber(metrics.totalVolumes)}
                 description={`${formatNumber(totalDeliveries)} entregas no período`}
                 icon={<Boxes className="h-5 w-5" />}
-                accent="#7c3aed"
+                accent="#7581a3"
                 active={activeKpi === 'volumes'}
                 onClick={() => scrollToSection('entregas', 'volumes')}
               />
@@ -342,7 +342,7 @@ export default function DashboardPage() {
             <section id="entregas" className="scroll-mt-28 space-y-4">
               <div className="flex flex-wrap items-end justify-between gap-3 px-1">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-600">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700">
                     Operação
                   </p>
                   <h2 className="mt-1 text-lg font-extrabold tracking-tight text-slate-800">
@@ -353,16 +353,16 @@ export default function DashboardPage() {
                   {formatNumber(totalDeliveries)} entregas · {formatNumber(metrics.totalVolumes)} volumes
                 </span>
               </div>
-              <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+              <div className="grid grid-cols-1 gap-5 2xl:grid-cols-2">
                 {metrics.otifTimeSeries.some((point) => point.value !== null) ? (
-                  <OTIFLineChart data={metrics.otifTimeSeries} height={330} />
+                  <OTIFLineChart data={metrics.otifTimeSeries} height={360} />
                 ) : (
                   <EmptyPanel message="Sem dados de entrega neste período." />
                 )}
                 {metrics.returnTrend.some(
                   (point) => point.returns > 0 || point.successRate !== null
                 ) ? (
-                  <ReturnTrendChart data={metrics.returnTrend} height={330} />
+                  <ReturnTrendChart data={metrics.returnTrend} height={360} />
                 ) : (
                   <EmptyPanel message="A evolução aparecerá quando houver viagens no período." />
                 )}
@@ -371,7 +371,7 @@ export default function DashboardPage() {
 
             <section id="filiais" className="scroll-mt-28 space-y-4">
               <div className="px-1">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-500">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700">
                   Rede
                 </p>
                 <h2 className="mt-1 text-lg font-extrabold tracking-tight text-slate-800">
@@ -381,44 +381,44 @@ export default function DashboardPage() {
                   Selecione uma filial no gráfico para cruzar os indicadores.
                 </p>
               </div>
-              <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+              <div className="grid grid-cols-1 gap-5 2xl:grid-cols-2">
                 {metrics.entregasPorFilial.length ? (
                   <FilialVolumeChart
                     data={metrics.entregasPorFilial}
-                    height={340}
+                    height={360}
                     onSelectBranch={setSelectedBranch}
                   />
                 ) : (
                   <EmptyPanel message="Não há entregas por filial para o filtro selecionado." />
                 )}
                 {hasPendingSheet && metrics.topCarriersDelay.length > 0 && (
-                  <CarrierDelayBarChart data={metrics.topCarriersDelay} height={340} />
+                  <CarrierDelayBarChart data={metrics.topCarriersDelay} height={360} />
                 )}
                 {hasPendingSheet &&
                   metrics.filialReturnData.some((item) => item.returns > 0) && (
-                    <FilialReturnChart data={metrics.filialReturnData} height={340} />
+                    <FilialReturnChart data={metrics.filialReturnData} height={360} />
                   )}
               </div>
             </section>
 
             <section id="motoristas" className="scroll-mt-28 space-y-4">
               <div className="px-1">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-600">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700">
                   Equipe
                 </p>
                 <h2 className="mt-1 text-lg font-extrabold tracking-tight text-slate-800">
                   Produtividade dos motoristas
                 </h2>
               </div>
-              <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+              <div className="grid grid-cols-1 gap-5 2xl:grid-cols-2">
                 {metrics.entregasPorMotorista.length ? (
-                  <MotoristaVolumeChart data={metrics.entregasPorMotorista} height={340} />
+                  <MotoristaVolumeChart data={metrics.entregasPorMotorista} height={360} />
                 ) : (
                   <EmptyPanel message="Não há entregas por motorista para o filtro selecionado." />
                 )}
                 {hasPendingSheet &&
                   metrics.driverReturnData.some((item) => item.returns > 0) && (
-                    <MotoristaReturnChart data={metrics.driverReturnData} height={340} />
+                    <MotoristaReturnChart data={metrics.driverReturnData} height={360} />
                   )}
               </div>
             </section>
@@ -439,8 +439,8 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 {hasReturnReasons ? (
-                  <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                    <ReturnReasonsDoughnutChart data={metrics.returnReasons} height={340} />
+                  <div className="grid grid-cols-1 gap-5 2xl:grid-cols-2">
+                    <ReturnReasonsDoughnutChart data={metrics.returnReasons} height={360} />
                     {hasOccurrences && (
                       <div id="ocorrencias" className="scroll-mt-28">
                         <OcorrenciasTable data={metrics.entregasComOcorrencia} />

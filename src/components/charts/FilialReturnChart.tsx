@@ -21,7 +21,7 @@ export function FilialReturnChart({ data, height = 340 }: FilialReturnChartProps
     xAxis: {
       type: 'category',
       data: top.map((item) => item.name),
-      axisLabel: { color: '#64748b', fontSize: 10, interval: 0, rotate: 30 },
+      axisLabel: { color: '#64748b', fontSize: 10, interval: 0, rotate: 30, hideOverlap: true },
       axisLine: { lineStyle: { color: '#e2e8f0' } },
       axisTick: { show: false },
     },
@@ -67,5 +67,12 @@ export function FilialReturnChart({ data, height = 340 }: FilialReturnChartProps
     ],
   };
 
-  return <ChartCard title="Retornos por Filial" option={option} height={height} />;
+  return (
+    <ChartCard
+      title="Retornos por filial"
+      subtitle="Volume e taxa de retorno por filial."
+      option={option}
+      height={height}
+    />
+  );
 }

@@ -26,7 +26,7 @@ export function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#eaf0f6]">
+    <div className="min-h-screen bg-[#e1eceb]">
       <Sidebar
         open={sidebarOpen}
         showPending={showPending}
@@ -48,7 +48,7 @@ export function DashboardLayout({
           currentPeriod={currentPeriod}
           onPeriodChange={onPeriodChange || (() => {})}
         />
-        <main id="dashboard-main" className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-9">
+        <main id="dashboard-main" className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8">
           {children}
         </main>
       </div>

@@ -67,5 +67,12 @@ export function ReturnTrendChart({ data, height = 340 }: ReturnTrendChartProps) 
     ],
   };
 
-  return <ChartCard title="Evolução de retornos e sucesso" option={option} height={height} />;
+  return (
+    <ChartCard
+      title="Evolução de retornos e sucesso"
+      subtitle="Volume de retornos e taxa diária de sucesso."
+      option={option}
+      height={height}
+    />
+  );
 }

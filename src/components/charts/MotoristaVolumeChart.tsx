@@ -16,7 +16,7 @@ export function MotoristaVolumeChart({ data, height = 320 }: MotoristaVolumeChar
     xAxis: {
       type: 'category',
       data: top.map((d) => d.name),
-      axisLabel: { color: '#64748b', fontSize: 11, interval: 0, rotate: 28 },
+      axisLabel: { color: '#64748b', fontSize: 11, interval: 0, rotate: 28, hideOverlap: true },
       axisLine: { lineStyle: { color: '#e2e8f0' } },
       axisTick: { show: false },
     },
@@ -70,5 +70,12 @@ export function MotoristaVolumeChart({ data, height = 320 }: MotoristaVolumeChar
     ],
   };
 
-  return <ChartCard title="Top Motoristas por Volume de Entregas" option={option} height={height} />;
+  return (
+    <ChartCard
+      title="Top motoristas por volume de entregas"
+      subtitle="Motoristas com mais entregas no período."
+      option={option}
+      height={height}
+    />
+  );
 }

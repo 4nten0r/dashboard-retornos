@@ -35,6 +35,7 @@ export function OTIFLineChart({ data, height = 320 }: OTIFLineChartProps) {
         color: '#64748b',
         fontSize: 12,
         margin: 12,
+        hideOverlap: true,
       },
     },
     yAxis: {
@@ -139,5 +140,12 @@ export function OTIFLineChart({ data, height = 320 }: OTIFLineChartProps) {
     ],
   };
 
-  return <ChartCard title="Evolução da taxa de entregas concluídas" option={option} height={height} />;
+  return (
+    <ChartCard
+      title="Evolução da taxa de entregas concluídas"
+      subtitle="Percentual de viagens concluídas por dia."
+      option={option}
+      height={height}
+    />
+  );
 }

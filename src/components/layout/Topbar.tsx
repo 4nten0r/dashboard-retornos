@@ -29,7 +29,7 @@ export function Topbar({ title, onMenuClick, currentPeriod, onPeriodChange }: To
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-white/70 bg-[#eaf0f6]/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 border-b border-white/70 bg-[#e1eceb]/90 backdrop-blur-xl">
       <div className="mx-auto flex h-[72px] max-w-[1600px] items-center justify-between gap-4 px-4 sm:px-7 lg:px-9">
         <div className="flex min-w-0 items-center gap-3">
           <button
@@ -41,7 +41,7 @@ export function Topbar({ title, onMenuClick, currentPeriod, onPeriodChange }: To
             <Menu className="h-5 w-5" />
           </button>
           <div className="min-w-0">
-            <p className="truncate text-[10px] font-bold uppercase tracking-[0.2em] text-sky-600">
+            <p className="truncate text-[10px] font-bold uppercase tracking-[0.2em] text-teal-700">
               Dias+ / Operações
             </p>
             <h1 className="truncate text-sm font-bold text-slate-800 sm:text-base">{title}</h1>
@@ -52,11 +52,11 @@ export function Topbar({ title, onMenuClick, currentPeriod, onPeriodChange }: To
           <button
             type="button"
             onClick={() => setPeriodOpen((open) => !open)}
-            className="flex items-center gap-2.5 rounded-xl border border-white/80 bg-[#eaf0f6] px-3 py-2.5 text-xs font-semibold text-slate-600 shadow-[4px_4px_9px_#cbd4df,-4px_-4px_9px_#ffffff] transition hover:text-sky-700 sm:px-4 sm:text-sm"
+            className="flex items-center gap-2.5 rounded-xl border border-white/80 bg-[#e4efee] px-3 py-2.5 text-xs font-semibold text-slate-700 shadow-[4px_4px_9px_#bfd1cf,-4px_-4px_9px_#f8fcfb] transition hover:text-teal-800 sm:px-4 sm:text-sm"
             aria-haspopup="listbox"
             aria-expanded={periodOpen}
           >
-            <CalendarDays className="h-4 w-4 text-sky-600" />
+            <CalendarDays className="h-4 w-4 text-teal-700" />
             <span className="max-w-32 truncate sm:max-w-none">{currentPeriodLabel}</span>
             <ChevronDown
               className={`h-4 w-4 text-slate-400 transition-transform ${periodOpen ? 'rotate-180' : ''}`}
@@ -66,7 +66,7 @@ export function Topbar({ title, onMenuClick, currentPeriod, onPeriodChange }: To
             <div
               role="listbox"
               aria-label="Selecionar período"
-              className="absolute right-0 mt-3 w-52 rounded-2xl border border-white/80 bg-[#edf2f8] p-2 shadow-[10px_10px_22px_#cbd4df,-10px_-10px_22px_#ffffff]"
+              className="absolute right-0 mt-3 w-52 rounded-2xl border border-white/80 bg-[#eaf2f1] p-2 shadow-[10px_10px_22px_#bfd1cf,-10px_-10px_22px_#f8fcfb]"
             >
               {periodOptions.map((period) => (
                 <button
@@ -80,7 +80,7 @@ export function Topbar({ title, onMenuClick, currentPeriod, onPeriodChange }: To
                   }}
                   className={`w-full rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition sm:text-sm ${
                     period.value === currentPeriod
-                      ? 'bg-sky-50 text-sky-700'
+                      ? 'bg-teal-50 text-teal-800'
                       : 'text-slate-600 hover:bg-white/70'
                   }`}
                 >

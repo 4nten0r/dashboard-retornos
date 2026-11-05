@@ -31,7 +31,7 @@ export function FilialVolumeChart({ data, height = 320, onSelectBranch }: Filial
     xAxis: {
       type: 'category',
       data: top.map((d) => d.name),
-      axisLabel: { color: '#64748b', fontSize: 11, interval: 0, rotate: 28 },
+      axisLabel: { color: '#64748b', fontSize: 11, interval: 0, rotate: 28, hideOverlap: true },
       axisLine: { lineStyle: { color: '#e2e8f0' } },
       axisTick: { show: false },
     },

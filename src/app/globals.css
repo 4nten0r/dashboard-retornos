@@ -4,9 +4,9 @@
 
 @layer base {
   :root {
-    --background: 234 240 246;
-    --foreground: 30 41 59;
-    --surface: 234 240 246;
+    --background: 225 236 235;
+    --foreground: 38 70 74;
+    --surface: 225 236 235;
   }
 
   * {
@@ -16,9 +16,9 @@
   body {
     @apply min-h-screen text-slate-800 antialiased;
     background:
-      radial-gradient(ellipse at 87% 4%, rgba(196, 224, 245, 0.48), transparent 30rem),
-      radial-gradient(ellipse at 8% 52%, rgba(255, 255, 255, 0.65), transparent 32rem),
-      #eaf0f6;
+      radial-gradient(ellipse at 87% 4%, rgba(152, 190, 190, 0.3), transparent 30rem),
+      radial-gradient(ellipse at 8% 52%, rgba(248, 252, 251, 0.7), transparent 32rem),
+      #e1eceb;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
@@ -30,23 +30,23 @@
 
 @layer components {
   .neo-card {
-    background: linear-gradient(145deg, rgba(246, 249, 252, 0.94), rgba(231, 237, 244, 0.96));
+    background: linear-gradient(145deg, rgba(239, 246, 245, 0.97), rgba(220, 233, 232, 0.98));
     box-shadow:
-      9px 9px 20px rgba(185, 197, 211, 0.52),
-      -9px -9px 20px rgba(255, 255, 255, 0.86);
+      9px 9px 20px rgba(174, 195, 194, 0.48),
+      -9px -9px 20px rgba(250, 253, 252, 0.88);
   }
 
   .neo-card:hover {
     box-shadow:
-      12px 12px 26px rgba(180, 193, 208, 0.55),
-      -12px -12px 26px rgba(255, 255, 255, 0.94);
+      12px 12px 26px rgba(164, 188, 187, 0.52),
+      -12px -12px 26px rgba(252, 255, 254, 0.94);
   }
 
   .neo-kpi {
-    background: linear-gradient(145deg, #f5f8fc, #e6ecf3);
+    background: linear-gradient(145deg, #eff6f5, #dce9e8);
     box-shadow:
-      7px 7px 16px rgba(185, 197, 211, 0.6),
-      -7px -7px 16px rgba(255, 255, 255, 0.9);
+      7px 7px 16px rgba(174, 195, 194, 0.55),
+      -7px -7px 16px rgba(250, 253, 252, 0.88);
     transform-style: preserve-3d;
     will-change: transform;
   }
@@ -54,13 +54,13 @@
   .neo-kpi:hover,
   .neo-kpi-active {
     box-shadow:
-      inset 3px 3px 7px rgba(185, 197, 211, 0.45),
-      inset -3px -3px 7px rgba(255, 255, 255, 0.8),
+      inset 3px 3px 7px rgba(170, 192, 191, 0.45),
+      inset -3px -3px 7px rgba(250, 253, 252, 0.82),
       0 12px 24px rgba(100, 116, 139, 0.12);
   }
 
   .neo-kpi-active {
-    border-color: rgba(14, 165, 233, 0.35);
+    border-color: rgba(63, 133, 136, 0.42);
   }
 
   .card {

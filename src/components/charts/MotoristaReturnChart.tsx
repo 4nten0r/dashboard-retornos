@@ -21,7 +21,7 @@ export function MotoristaReturnChart({ data, height = 340 }: MotoristaReturnChar
     xAxis: {
       type: 'category',
       data: top.map((item) => item.name),
-      axisLabel: { color: '#64748b', fontSize: 10, interval: 0, rotate: 30 },
+      axisLabel: { color: '#64748b', fontSize: 10, interval: 0, rotate: 30, hideOverlap: true },
       axisLine: { lineStyle: { color: '#e2e8f0' } },
       axisTick: { show: false },
     },
@@ -67,5 +67,12 @@ export function MotoristaReturnChart({ data, height = 340 }: MotoristaReturnChar
     ],
   };
 
-  return <ChartCard title="Retornos por Motorista" option={option} height={height} />;
+  return (
+    <ChartCard
+      title="Retornos por motorista"
+      subtitle="Volume e taxa de retorno por motorista."
+      option={option}
+      height={height}
+    />
+  );
 }

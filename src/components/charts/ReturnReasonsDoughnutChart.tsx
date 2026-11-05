@@ -37,16 +37,19 @@ export function ReturnReasonsDoughnutChart({ data, height = 320 }: ReturnReasons
     legend: {
       show: true,
       orient: 'vertical',
-      right: 20,
+      right: 4,
       top: 'center',
+      width: '42%',
       itemWidth: 10,
       itemHeight: 10,
-      itemGap: 14,
+      itemGap: 10,
       textStyle: {
         color: '#334155',
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: 500,
         padding: [0, 0, 0, 8],
+        overflow: 'truncate',
+        ellipsis: '…',
       },
       formatter: (name: string) => {
         const item = sortedData.find((d) => d.name === name);
@@ -78,8 +81,8 @@ export function ReturnReasonsDoughnutChart({ data, height = 320 }: ReturnReasons
       {
         name: 'Ocorrências',
         type: 'pie',
-        radius: ['55%', '78%'],
-        center: ['38%', '50%'],
+        radius: ['40%', '56%'],
+        center: ['30%', '50%'],
         avoidLabelOverlap: true,
         padAngle: 4,
         itemStyle: {
@@ -101,15 +104,24 @@ export function ReturnReasonsDoughnutChart({ data, height = 320 }: ReturnReasons
     ],
     graphic: {
       type: 'text',
-      left: 'center',
+      left: '30%',
       top: 'center',
       style: {
         text: `${total.toLocaleString()}`,
         font: 'bold 36px Inter, system-ui',
         fill: '#0f172a',
+        align: 'center',
+        verticalAlign: 'middle',
       },
     },
   };
 
-  return <ChartCard title="Ocorrências registradas nas notas pendentes" option={option} height={height} />;
+  return (
+    <ChartCard
+      title="Ocorrências nas notas pendentes"
+      subtitle="Distribuição dos motivos e participação no total."
+      option={option}
+      height={height}
+    />
+  );
 }

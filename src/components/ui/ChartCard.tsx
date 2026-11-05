@@ -25,7 +25,7 @@ export function ChartCard({
   onEvents,
 }: ChartCardProps) {
   const mergedOption: EChartsOption = {
-    color: ['#0ea5e9', '#10b981', '#f59e0b', '#f43f5e', '#6366f1', '#14b8a6'],
+    color: ['#438f91', '#69a69a', '#c69860', '#bb7272', '#7d88a5', '#65aaa4'],
     backgroundColor: 'transparent',
     animation: true,
     animationDuration: 650,
@@ -42,7 +42,7 @@ export function ChartCard({
       emphasis: { iconStyle: { borderColor: '#0284c7' } },
       feature: {
         restore: { title: 'Restaurar visualização' },
-        saveAsImage: { title: 'Salvar gráfico', pixelRatio: 2, backgroundColor: '#edf2f8' },
+        saveAsImage: { title: 'Salvar gráfico', pixelRatio: 2, backgroundColor: '#eaf2f1' },
       },
     },
     ...option,
@@ -55,16 +55,20 @@ export function ChartCard({
         className
       )}
     >
-      <header className="mb-1 flex min-h-12 items-start gap-3 pr-20">
-        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#eaf0f6] text-sky-600 shadow-[inset_2px_2px_5px_#d4dce6,inset_-2px_-2px_5px_#ffffff]">
+      <header className="mb-2 flex min-h-[68px] items-start gap-3 pr-14 sm:pr-16">
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#e4efee] text-teal-700 shadow-[inset_2px_2px_5px_#c7d8d6,inset_-2px_-2px_5px_#f8fcfb]">
           <BarChart3 className="h-4 w-4" />
         </span>
-        <div className="min-w-0">
-          <h2 className="text-sm font-bold leading-5 text-slate-800 sm:text-[15px]">{title}</h2>
-          {subtitle && <p className="mt-1 text-[11px] leading-4 text-slate-400">{subtitle}</p>}
+        <div className="min-w-0 flex-1">
+          <h2 className="line-clamp-2 text-[13px] font-bold leading-[1.2rem] text-slate-800 sm:text-[15px]">
+            {title}
+          </h2>
+          {subtitle && (
+            <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-500">{subtitle}</p>
+          )}
         </div>
       </header>
-      <div className="neo-chart relative" style={{ height }}>
+      <div className="neo-chart relative min-h-[280px]" style={{ height }}>
         <ReactECharts
           option={mergedOption}
           style={{ width: '100%', height: '100%' }}
