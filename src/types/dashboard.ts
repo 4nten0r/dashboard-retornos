@@ -9,6 +9,41 @@ export interface KPIMetric {
   format?: 'percentage' | 'currency' | 'number';
 }
 
+// New interface for return reason breakdown KPI
+export interface ReturnReasonKPI {
+  id: string;
+  label: string;
+  value: number;
+  percentage: number;
+  color: string;
+  description: string;
+}
+
+// Interface for return trend time series
+export interface ReturnTrendPoint {
+  date: string;
+  returns: number;
+  successRate: number;
+}
+
+// Interface for filial return comparison
+export interface FilialReturnData {
+  name: string;
+  deliveries: number;
+  returns: number;
+  returnRate: number;
+  volumes: number;
+}
+
+// Interface for driver return comparison
+export interface DriverReturnData {
+  name: string;
+  deliveries: number;
+  returns: number;
+  returnRate: number;
+  volumes: number;
+}
+
 export interface ChartDataPoint {
   name: string;
   value: number;

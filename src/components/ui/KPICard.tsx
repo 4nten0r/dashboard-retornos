@@ -11,13 +11,22 @@ interface KPICardProps {
 
 export function KPICard({ label, value, description, icon }: KPICardProps) {
   return (
-    <div className="card p-6">
+    <div className="card p-6 neumorphism" style={{
+      background: 'rgba(255, 255, 255, 0.8)',
+      backdropFilter: 'blur(10px)',
+      boxShadow: '0 5px 10px rgba(0, 0, 0, 0.1), 0 -5px 10px rgba(255, 255, 255, 0.1)',
+    }}>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500">{label}</p>
           <p className="mt-2 text-3xl font-bold text-slate-900 tabular-nums">{value}</p>
         </div>
-        <div className="p-3 bg-slate-100 rounded-xl">
+        <div className="p-3 neumorphism-inset" style={{
+          background: 'rgba(255, 255, 255, 0.8)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: 'inset 0 5px 10px rgba(0, 0, 0, 0.1), inset 0 -5px 10px rgba(255, 255, 255, 0.1)',
+          borderRadius: '0.75rem',
+        }}>
           {icon || <Target className="w-6 h-6 text-slate-600" />}
         </div>
       </div>

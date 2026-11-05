@@ -1,14 +1,17 @@
 import { getFallbackMetrics } from '@/data/mockData';
+import type {
+  DriverReturnData,
+  FilialReturnData,
+  ReturnReasonKPI,
+  ReturnTrendPoint,
+} from '@/types/dashboard';
 
 type CsvRow = Record<string, string>;
+
 interface CsvSheet {
   headers: string[];
   rows: CsvRow[];
 }
-
-const DEFAULT_SHEET_ID = process.env.SHEETS_SHEET_ID || '12_DwR-eL1fM-Aj77ZSFFxtTpLAC9PeN6FE2EoHTn-RA';
-const SECONDARY_SHEET_ID = '1yrEfFEEa4rtNcYzkWMjGvFPPuHS5ihauzUeNXORE2M4';
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 export interface DashboardMetrics {
   taxaSucesso: number;
@@ -18,6 +21,10 @@ export interface DashboardMetrics {
   otifTimeSeries: Array<{ date: string; value: number }>;
   topCarriersDelay: Array<{ name: string; delayRate: number; totalShipments: number }>;
   returnReasons: Array<{ name: string; value: number; percentage: number }>;
+  returnReasonKPIs: ReturnReasonKPI[];
+  returnTrend: ReturnTrendPoint[];
+  filialReturnData: FilialReturnData[];
+  driverReturnData: DriverReturnData[];
   entregasPorFilial: Array<{ name: string; entregas: number; volumes: number }>;
   entregasPorMotorista: Array<{ name: string; entregas: number; volumes: number }>;
   totalVolumes: number;
@@ -35,6 +42,13 @@ export interface DashboardMetrics {
   periodDays: number;
   isMock?: boolean;
 }
+
+const DEFAULT_SHEET_ID = '12_DwR-eL1fM-Aj77ZSFFxtTpLAC9PeN6FE2EoHTn-RA';
+const SECONDARY_SHEET_ID = '1yrEfFEEa4rtNcYzkWMJgVgFPPuHS5ihauzUeNXORE2M4';
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 2000;
+const RETURN_COLORS = ['#ef4444', '#f97316', '#fbbf24', '#34d399', '#6366f1', '#a855f7'];
 
 function parseCsv(csv: string): string[][] {
   const rows: string[][] = [];
@@ -76,6 +90,11 @@ function parseCsv(csv: string): string[][] {
 }
 
 function parseSheet(csv: string, sheetName: string): CsvSheet {
+  const trimmedCsv = csv.trimStart();
+  if (/^(?:<!doctype|<html|google\.visualization\.query\.setresponse)/i.test(trimmedCsv)) {
+    throw new Error(`A aba "${sheetName}" não retornou CSV válido.`);
+  }
+
   const [headerRow, ...dataRows] = parseCsv(csv);
   if (!headerRow) {
     throw new Error(`A aba "${sheetName}" não retornou dados.`);
@@ -84,15 +103,13 @@ function parseSheet(csv: string, sheetName: string): CsvSheet {
   const headers = headerRow.map((header, index) =>
     (index === 0 ? header.replace(/^\uFEFF/, '') : header).trim()
   );
-  const rows = dataRows.map((values) =>
-    Object.fromEntries(headers.map((header, index) => [header, (values[index] || '').trim()]))
-  );
-
-  const responseText = headers.join(' ').toLocaleLowerCase('pt-BR');
-  if (/not found|erro|exception|<!doctype|<html/.test(responseText)) {
+  if (/not found|erro|exception/i.test(headers.join(' '))) {
     throw new Error(`Não foi possível ler a aba "${sheetName}".`);
   }
 
+  const rows = dataRows.map((values) =>
+    Object.fromEntries(headers.map((header, index) => [header, (values[index] || '').trim()]))
+  );
   return { headers, rows };
 }
 
@@ -105,39 +122,51 @@ function getSheetUrls(sheetName: string): string[] {
     urls.push(url.toString());
   }
 
-  const sheetId = process.env.SHEETS_SHEET_ID || DEFAULT_SHEET_ID;
-  urls.push(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`);
-  if (sheetId !== SECONDARY_SHEET_ID) {
-    urls.push(`https://docs.google.com/spreadsheets/d/${SECONDARY_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`);
+  const primarySheetId = process.env.SHEETS_SHEET_ID || DEFAULT_SHEET_ID;
+  for (const sheetId of [primarySheetId, SECONDARY_SHEET_ID]) {
+    if (urls.some((url) => url.includes(`/spreadsheets/d/${sheetId}/`))) continue;
+    urls.push(
+      `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`
+    );
   }
-
   return urls;
 }
 
-async function fetchSheet(sheetName: string): Promise<CsvSheet> {
+async function fetchSheetWithRetry(sheetName: string): Promise<CsvSheet> {
   const urls = getSheetUrls(sheetName);
-  let lastError: Error | null = null;
+  let lastError: Error | undefined;
 
-  for (const url of urls) {
-    try {
-      const response = await fetch(url, {
-        headers: { Accept: 'text/csv,text/plain;q=0.9,*/*;q=0.8' },
-        signal: AbortSignal.timeout(6000),
-        next: { revalidate: 60 },
-      });
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
+    for (const url of urls) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-      if (response.ok) {
-        const text = await response.text();
-        if (text && !text.includes('<!DOCTYPE html>') && text.length > 20) {
-          return parseSheet(text, sheetName);
+      try {
+        const response = await fetch(url, {
+          headers: { Accept: 'text/csv,text/plain;q=0.9,*/*;q=0.8' },
+          signal: controller.signal,
+          next: { revalidate: 60 },
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
+        return parseSheet(await response.text(), sheetName);
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.warn(
+          `Tentativa ${attempt + 1} falhou para a aba "${sheetName}": ${lastError.message}`
+        );
+      } finally {
+        clearTimeout(timeoutId);
       }
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
+    }
+
+    if (attempt < MAX_RETRIES) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY * 2 ** attempt));
     }
   }
 
-  throw lastError || new Error(`Não foi possível carregar a aba ${sheetName}`);
+  throw lastError || new Error(`Não foi possível carregar a aba "${sheetName}".`);
 }
 
 function parseNumber(value: string | undefined): number {
@@ -155,25 +184,45 @@ function parseDate(value: string | undefined): Date | null {
 
   const googleDate = value.match(/^Date\((\d{4}),\s*(\d{1,2}),\s*(\d{1,2})\)$/);
   if (googleDate) {
-    return new Date(Date.UTC(Number(googleDate[1]), Number(googleDate[2]), Number(googleDate[3])));
+    const year = Number(googleDate[1]);
+    const month = Number(googleDate[2]);
+    const day = Number(googleDate[3]);
+    const date = new Date(Date.UTC(year, month, day));
+    return date.getUTCFullYear() === year && date.getUTCMonth() === month && date.getUTCDate() === day
+      ? date
+      : null;
   }
 
   const brazilianDate = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (brazilianDate) {
-    return new Date(Date.UTC(Number(brazilianDate[3]), Number(brazilianDate[2]) - 1, Number(brazilianDate[1])));
+    const day = Number(brazilianDate[1]);
+    const month = Number(brazilianDate[2]) - 1;
+    const year = Number(brazilianDate[3]);
+    const date = new Date(Date.UTC(year, month, day));
+    return date.getUTCFullYear() === year && date.getUTCMonth() === month && date.getUTCDate() === day
+      ? date
+      : null;
   }
 
   const parsed = new Date(value.replace(/\s*\([^)]*\)\s*$/, ''));
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function getRowDate(row: CsvRow, columns: string[]): Date | null {
+  for (const column of columns) {
+    const date = parseDate(row[column]);
+    if (date) return date;
+  }
+  return null;
+}
+
 function filterByPeriod(rows: CsvRow[], dateColumns: string[], periodDays: number): CsvRow[] {
   const now = new Date();
-  const cutoff = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) -
-    (periodDays - 1) * DAY_IN_MS;
+  const endOfToday = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1) - 1;
+  const cutoff = endOfToday - periodDays * DAY_IN_MS + 1;
   return rows.filter((row) => {
-    const date = dateColumns.map((column) => parseDate(row[column])).find((value) => value !== null);
-    return date !== undefined && date !== null && date.getTime() >= cutoff && date.getTime() <= now.getTime();
+    const date = getRowDate(row, dateColumns);
+    return date !== null && date.getTime() >= cutoff && date.getTime() <= endOfToday;
   });
 }
 
@@ -185,6 +234,11 @@ function isOverdue(row: CsvRow): boolean {
   return dueDate !== null && dueDate.getTime() < Date.now();
 }
 
+function getOccurrence(row: CsvRow): string {
+  const occurrence = (row['Ocorrência'] || '').trim();
+  return occurrence.toLocaleLowerCase('pt-BR') === 'não informado' ? '' : occurrence;
+}
+
 function requireColumns(headers: string[], sheet: string, columns: string[]): void {
   const available = new Set(headers);
   const missing = columns.filter((column) => !available.has(column));
@@ -193,25 +247,54 @@ function requireColumns(headers: string[], sheet: string, columns: string[]): vo
   }
 }
 
+function increment(map: Map<string, number>, key: string, amount = 1): void {
+  if (key) map.set(key, (map.get(key) || 0) + amount);
+}
+
+function getEntityReturnData(
+  deliveries: Map<string, { entregas: number; volumes: number }>,
+  returns: Map<string, number>
+): FilialReturnData[] {
+  const names = new Set(
+    Array.from(deliveries.keys()).concat(Array.from(returns.keys()))
+  );
+  return Array.from(names)
+    .map((name) => {
+      const totals = deliveries.get(name) || { entregas: 0, volumes: 0 };
+      const returnCount = returns.get(name) || 0;
+      return {
+        name,
+        deliveries: totals.entregas,
+        returns: returnCount,
+        returnRate: totals.entregas ? (returnCount / totals.entregas) * 100 : 0,
+        volumes: totals.volumes,
+      };
+    })
+    .sort((a, b) => b.returns - a.returns || a.name.localeCompare(b.name, 'pt-BR'));
+}
+
 export async function getDashboardMetrics(periodDays: number): Promise<DashboardMetrics> {
   try {
     const [travelSheet, pendingSheet] = await Promise.all([
-      fetchSheet('Viagens'),
-      fetchSheet('Pendencias'),
+      fetchSheetWithRetry('Viagens'),
+      fetchSheetWithRetry('Pendencias'),
     ]);
 
-    const { rows: travelRows } = travelSheet;
-    const { rows: pendingRows } = pendingSheet;
-
     requireColumns(travelSheet.headers, 'Viagens', ['Data Entrega', 'Sucessos', 'Insucessos']);
-    requireColumns(pendingSheet.headers, 'Pendencias', ['Valor NF', 'Efetividade', 'Data Prazo', 'Ocorrência']);
+    requireColumns(pendingSheet.headers, 'Pendencias', [
+      'Valor NF',
+      'Efetividade',
+      'Data Prazo',
+      'Ocorrência',
+    ]);
 
-    const travels = filterByPeriod(travelRows, ['Data Entrega'], periodDays);
+    const travels = filterByPeriod(travelSheet.rows, ['Data Entrega'], periodDays);
     const pendingNotes = filterByPeriod(
-      pendingRows,
+      pendingSheet.rows,
       ['Data ocorrência', 'Embarque', 'Data última viagem', 'Data Prazo'],
       periodDays
     );
+    const returns = pendingNotes.filter((row) => getOccurrence(row) !== '');
 
     const totalsByDate = new Map<string, { successes: number; attempts: number }>();
     for (const row of travels) {
@@ -233,79 +316,118 @@ export async function getDashboardMetrics(periodDays: number): Promise<Dashboard
       0
     );
     const delayedNotes = pendingNotes.filter(isOverdue).length;
-    const branches = new Map<string, { delayed: number; total: number }>();
-    const reasons = new Map<string, number>();
+    const pendingByBranch = new Map<string, { delayed: number; total: number }>();
+    const returnReasons = new Map<string, number>();
+    const returnsByBranch = new Map<string, number>();
+    const returnsByDriver = new Map<string, number>();
+    const returnsByDate = new Map<string, number>();
 
     for (const row of pendingNotes) {
-      const branch = row['Filial de Entrega']?.trim() || row['Filial']?.trim();
+      const branch = (row['Filial de Entrega'] || row['Filial'] || '').trim();
       if (branch) {
-        const totals = branches.get(branch) || { delayed: 0, total: 0 };
+        const totals = pendingByBranch.get(branch) || { delayed: 0, total: 0 };
         totals.total += 1;
         if (isOverdue(row)) totals.delayed += 1;
-        branches.set(branch, totals);
+        pendingByBranch.set(branch, totals);
       }
 
-      const reason = row['Ocorrência']?.trim();
-      if (reason) reasons.set(reason, (reasons.get(reason) || 0) + 1);
+      const occurrence = getOccurrence(row);
+      if (!occurrence) continue;
+      increment(returnReasons, occurrence);
+      increment(returnsByBranch, branch);
+      increment(returnsByDriver, (row['Motorista última viagem'] || row['Motorista'] || '').trim());
+
+      const returnDate = getRowDate(row, [
+        'Data ocorrência',
+        'Data última viagem',
+        'Embarque',
+        'Data Prazo',
+      ]);
+      if (returnDate) increment(returnsByDate, returnDate.toISOString().slice(0, 10));
     }
 
-    const reasonTotal = Array.from(reasons.values()).reduce((sum, value) => sum + value, 0);
+    const reasonTotal = Array.from(returnReasons.values()).reduce((sum, value) => sum + value, 0);
+    const returnReasonsData = Array.from(returnReasons.entries())
+      .map(([name, value]) => ({
+        name,
+        value,
+        percentage: reasonTotal ? (value / reasonTotal) * 100 : 0,
+      }))
+      .sort((a, b) => b.value - a.value);
+    const returnReasonKPIs: ReturnReasonKPI[] = returnReasonsData.map((reason, index) => ({
+      id: `reason-${index + 1}`,
+      label: reason.name,
+      value: reason.value,
+      percentage: reason.percentage,
+      color: RETURN_COLORS[index % RETURN_COLORS.length],
+      description: `${reason.value.toLocaleString('pt-BR')} ocorrência(s)`,
+    }));
 
-    const filialMap = new Map<string, { entregas: number; volumes: number }>();
+    const branchDeliveries = new Map<string, { entregas: number; volumes: number }>();
+    const driverDeliveries = new Map<string, { entregas: number; volumes: number }>();
     for (const row of travels) {
-      const filial = (row['Filial'] || 'Não informado').trim();
-      const entregas = parseNumber(row['Entregas']);
+      const deliveries = parseNumber(row['Entregas']) ||
+        parseNumber(row['Sucessos']) + parseNumber(row['Insucessos']);
       const volumes = parseNumber(row['Volumes']);
-      const cur = filialMap.get(filial) || { entregas: 0, volumes: 0 };
-      filialMap.set(filial, { entregas: cur.entregas + entregas, volumes: cur.volumes + volumes });
+      const branch = (row['Filial'] || '').trim();
+      const driver = (row['Motorista'] || '').trim();
+
+      for (const [name, map] of [
+        [branch, branchDeliveries],
+        [driver, driverDeliveries],
+      ] as const) {
+        if (!name) continue;
+        const totals = map.get(name) || { entregas: 0, volumes: 0 };
+        map.set(name, { entregas: totals.entregas + deliveries, volumes: totals.volumes + volumes });
+      }
     }
-    const entregasPorFilial = Array.from(filialMap.entries())
-      .map(([name, v]) => ({ name, entregas: v.entregas, volumes: v.volumes }))
+
+    const entregasPorFilial = Array.from(branchDeliveries.entries())
+      .map(([name, totals]) => ({ name, entregas: totals.entregas, volumes: totals.volumes }))
       .sort((a, b) => b.entregas - a.entregas);
-
-    const motoristaMap = new Map<string, { entregas: number; volumes: number }>();
-    for (const row of travels) {
-      const motorista = (row['Motorista'] || 'Não informado').trim();
-      const entregas = parseNumber(row['Entregas']);
-      const volumes = parseNumber(row['Volumes']);
-      const cur = motoristaMap.get(motorista) || { entregas: 0, volumes: 0 };
-      motoristaMap.set(motorista, { entregas: cur.entregas + entregas, volumes: cur.volumes + volumes });
-    }
-    const entregasPorMotorista = Array.from(motoristaMap.entries())
-      .map(([name, v]) => ({ name, entregas: v.entregas, volumes: v.volumes }))
+    const entregasPorMotorista = Array.from(driverDeliveries.entries())
+      .map(([name, totals]) => ({ name, entregas: totals.entregas, volumes: totals.volumes }))
       .sort((a, b) => b.entregas - a.entregas);
+    const filialReturnData = getEntityReturnData(branchDeliveries, returnsByBranch);
+    const driverReturnData = getEntityReturnData(driverDeliveries, returnsByDriver);
 
-    const totalVolumes = travels.reduce((sum, row) => sum + parseNumber(row['Volumes']), 0);
+    const dateLabels = new Set(
+      Array.from(totalsByDate.keys()).concat(Array.from(returnsByDate.keys()))
+    );
+    const returnTrend: ReturnTrendPoint[] = Array.from(dateLabels)
+      .sort()
+      .map((date) => {
+        const totals = totalsByDate.get(date) || { successes: 0, attempts: 0 };
+        return {
+          date,
+          returns: returnsByDate.get(date) || 0,
+          successRate: totals.attempts ? (totals.successes / totals.attempts) * 100 : 0,
+        };
+      });
 
-    const entregasComOcorrencia = pendingNotes
-      .filter((row) => {
-        const oc = (row['Ocorrência'] || '').trim();
-        return oc && oc !== '' && oc.toLowerCase() !== 'não informado';
-      })
+    const entregasComOcorrencia = returns
       .map((row) => ({
-        nf: (row['NF'] || '').trim(),
+        nf: (row['NF'] || row['Nota Fiscal'] || '').trim(),
         filial: (row['Filial'] || row['Filial de Entrega'] || '').trim(),
-        motorista: (row['Motorista'] || '').trim(),
-        data: row['Data Entrega'] || row['Data Prazo'] || row['Data Ocorrência'] || '',
+        motorista: (row['Motorista última viagem'] || row['Motorista'] || '').trim(),
+        data: row['Data ocorrência'] || row['Data última viagem'] || row['Data Prazo'] || '',
         volumes: parseNumber(row['Volumes']),
-        ocorrencia: (row['Ocorrência'] || '').trim(),
+        ocorrencia: getOccurrence(row),
         cidade: (row['Cidade'] || '').trim() || undefined,
         regiao: (row['Região'] || '').trim() || undefined,
       }))
-      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+      .sort(
+        (a, b) =>
+          (parseDate(b.data)?.getTime() || 0) - (parseDate(a.data)?.getTime() || 0)
+      );
 
     return {
       taxaSucesso: totalAttempts ? (totalSuccesses / totalAttempts) * 100 : 0,
       taxaAtraso: pendingNotes.length ? (delayedNotes / pendingNotes.length) * 100 : 0,
       valorTotalNf: pendingNotes.reduce((sum, row) => sum + parseNumber(row['Valor NF']), 0),
       totalNotasPendentes: pendingNotes.length,
-      otifTimeSeries: Array.from(totalsByDate.entries())
-        .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
-        .map(([date, totals]) => ({
-          date,
-          value: totals.attempts ? (totals.successes / totals.attempts) * 100 : 0,
-        })),
-      topCarriersDelay: Array.from(branches.entries())
+      otifTimeSeries: returnTrend.map(({ date, successRate }) => ({ date, value: successRate })),
+      topCarriersDelay: Array.from(pendingByBranch.entries())
         .map(([name, totals]) => ({
           name,
           delayRate: totals.total ? (totals.delayed / totals.total) * 100 : 0,
@@ -313,27 +435,21 @@ export async function getDashboardMetrics(periodDays: number): Promise<Dashboard
         }))
         .sort((a, b) => b.delayRate - a.delayRate)
         .slice(0, 5),
-      returnReasons: Array.from(reasons.entries())
-        .map(([name, value]) => ({
-          name,
-          value,
-          percentage: reasonTotal ? (value / reasonTotal) * 100 : 0,
-        }))
-        .sort((a, b) => b.value - a.value),
+      returnReasons: returnReasonsData,
+      returnReasonKPIs,
+      returnTrend,
+      filialReturnData,
+      driverReturnData,
       entregasPorFilial,
       entregasPorMotorista,
-      totalVolumes,
+      totalVolumes: travels.reduce((sum, row) => sum + parseNumber(row['Volumes']), 0),
       entregasComOcorrencia,
       lastUpdated: new Date().toISOString(),
       periodDays,
       isMock: false,
     };
   } catch (error) {
-    console.warn('Google Sheets inacessível ou offline. Utilizando dados integrados do sistema:', error);
-    const fallback = getFallbackMetrics(periodDays);
-    return {
-      ...fallback,
-      isMock: true,
-    };
+    console.warn('Google Sheets indisponível. Utilizando os dados demonstrativos:', error);
+    return { ...getFallbackMetrics(periodDays), isMock: true };
   }
 }

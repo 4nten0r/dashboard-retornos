@@ -1,4 +1,10 @@
-import type { PeriodOption, DashboardData } from '@/types/dashboard';
+import type {
+  DriverReturnData,
+  FilialReturnData,
+  PeriodOption,
+  ReturnReasonKPI,
+  ReturnTrendPoint,
+} from '@/types/dashboard';
 import type { DashboardMetrics } from '@/lib/data-service';
 
 export const periodOptions: { value: PeriodOption; label: string; days: number }[] = [
@@ -48,83 +54,64 @@ export function getFallbackMetrics(periodDays: number = 30): DashboardMetrics {
     { name: 'Filial São Paulo (Matriz)', delayRate: 3.2, totalShipments: 1420 },
   ];
 
-  // Generate time series OTIF
+  // Generate return reasons KPIs with colors
+  const returnReasonKPIs: ReturnReasonKPI[] = [
+    { id: 'ra', label: 'Destinatário Ausente', value: 78, percentage: 35.8, color: '#ef4444', description: '78 retornos por ausência' },
+    { id: 'nl', label: 'Endereço Não Localizado', value: 45, percentage: 20.6, color: '#f97316', description: '45 retornos por endereço inválido' },
+    { id: 'rav', label: 'Recusa por Avaria', value: 34, percentage: 15.6, color: '#fbbf24', description: '34 retornos por recusa de avaria' },
+    { id: 'het', label: 'Horário Excedido', value: 28, percentage: 12.8, color: '#34d399', description: '28 retornos por horário excedido' },
+    { id: 'des', label: 'Pedido em Desacordo', value: 18, percentage: 8.3, color: '#6366f1', description: '18 retornos por desacordo' },
+    { id: 'out', label: 'Outros Motivos', value: 15, percentage: 6.9, color: '#a855f7', description: '15 retornos por outros motivos' },
+  ];
+
+  // Generate return trend time series
   const now = new Date();
-  const otifTimeSeries: Array<{ date: string; value: number }> = [];
+  const returnTrend: ReturnTrendPoint[] = [];
   const points = Math.min(periodDays, 30);
   for (let i = points - 1; i >= 0; i--) {
     const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
     const dateStr = d.toISOString().slice(0, 10);
-    // realistic OTIF between 91% and 97%
-    const base = 94.2;
-    const wave = Math.sin(i * 0.4) * 2.1;
-    const jitter = ((i * 17) % 7) * 0.25 - 0.75;
-    const val = Number((base + wave + jitter).toFixed(1));
-    otifTimeSeries.push({ date: dateStr, value: Math.min(99, Math.max(88, val)) });
+    // Simulated return trend: decreasing over time with some variation
+    const base = 25 - (i * 0.3);
+    const variation = Math.sin(i * 0.5) * 3;
+    const jitter = ((i * 13) % 5) * 1.5 - 2;
+    const returns = Math.max(1, Math.floor(base + variation + jitter));
+    const rateVariation = (((i * 7) % 10) - 4.5) / 10;
+    const successRate = Number((95 - i * 0.3 + rateVariation).toFixed(1));
+    returnTrend.push({ date: dateStr, returns, successRate });
   }
 
-  const entregasComOcorrencia = [
-    {
-      nf: '001.482.910',
-      filial: 'Filial São Paulo',
-      motorista: 'Carlos Eduardo Silva',
-      data: new Date(now.getTime() - 1 * 86400000).toLocaleDateString('pt-BR'),
-      volumes: 12,
-      ocorrencia: 'Destinatário Ausente - 1ª Tentativa',
-      cidade: 'Campinas',
-      regiao: 'SP',
-    },
-    {
-      nf: '001.482.885',
-      filial: 'Filial Rio de Janeiro',
-      motorista: 'Marcos Roberto Santos',
-      data: new Date(now.getTime() - 1 * 86400000).toLocaleDateString('pt-BR'),
-      volumes: 4,
-      ocorrencia: 'Endereço Não Localizado',
-      cidade: 'Niterói',
-      regiao: 'RJ',
-    },
-    {
-      nf: '001.482.764',
-      filial: 'Filial Belo Horizonte',
-      motorista: 'José Antonio Pereira',
-      data: new Date(now.getTime() - 2 * 86400000).toLocaleDateString('pt-BR'),
-      volumes: 18,
-      ocorrencia: 'Recusa por Avaria na Embalagem',
-      cidade: 'Contagem',
-      regiao: 'MG',
-    },
-    {
-      nf: '001.482.691',
-      filial: 'Filial Curitiba',
-      motorista: 'Fernando Henrique Souza',
-      data: new Date(now.getTime() - 2 * 86400000).toLocaleDateString('pt-BR'),
-      volumes: 8,
-      ocorrencia: 'Horário de Entrega Excedido',
-      cidade: 'São José dos Pinhais',
-      regiao: 'PR',
-    },
-    {
-      nf: '001.482.512',
-      filial: 'Filial São Paulo',
-      motorista: 'Rodrigo Alves Costa',
-      data: new Date(now.getTime() - 3 * 86400000).toLocaleDateString('pt-BR'),
-      volumes: 25,
-      ocorrencia: 'Pedido em Desacordo com NF',
-      cidade: 'Guarulhos',
-      regiao: 'SP',
-    },
-    {
-      nf: '001.482.490',
-      filial: 'Filial Goiânia',
-      motorista: 'Paulo Cesar Ramos',
-      data: new Date(now.getTime() - 4 * 86400000).toLocaleDateString('pt-BR'),
-      volumes: 6,
-      ocorrencia: 'Destinatário Ausente - 2ª Tentativa',
-      cidade: 'Aparecida de Goiânia',
-      regiao: 'GO',
-    },
-  ];
+  // Filial return data
+  const filialReturnData: FilialReturnData[] = filiais.map((f, i) => ({
+    name: f.name,
+    deliveries: f.entregas,
+    returns: Math.floor(f.entregas * (0.04 + i * 0.005)),
+    returnRate: Number(((0.04 + i * 0.005) * 100).toFixed(1)),
+    volumes: f.volumes,
+  }));
+
+  // Driver return data
+  const driverReturnData: DriverReturnData[] = motoristas.map((m, i) => ({
+    name: m.name,
+    deliveries: m.entregas,
+    returns: Math.floor(m.entregas * (0.03 + i * 0.003)),
+    returnRate: Number(((0.03 + i * 0.003) * 100).toFixed(1)),
+    volumes: m.volumes,
+  }));
+
+  const entregasComOcorrencia = Array.from({ length: 10 }, (_, index) => {
+    const date = new Date(now.getTime() - index * 24 * 60 * 60 * 1000);
+    return {
+      nf: `NF-${100001 + index}`,
+      filial: filiais[index % filiais.length].name,
+      motorista: motoristas[index % motoristas.length].name,
+      data: date.toLocaleDateString('pt-BR'),
+      volumes: index + 1,
+      ocorrencia: returnReasons[index % returnReasons.length].name,
+      cidade: ['São Paulo', 'Curitiba', 'Belo Horizonte', 'Rio de Janeiro'][index % 4],
+      regiao: 'Sudeste',
+    };
+  });
 
   const totalVolumes = filiais.reduce((acc, f) => acc + f.volumes, 0);
 
@@ -133,14 +120,19 @@ export function getFallbackMetrics(periodDays: number = 30): DashboardMetrics {
     taxaAtraso: 5.4,
     valorTotalNf: 1284750.0,
     totalNotasPendentes: 218,
-    otifTimeSeries,
+    otifTimeSeries: returnTrend.map(p => ({ date: p.date, value: p.successRate })),
     topCarriersDelay,
     returnReasons,
+    returnReasonKPIs,
+    returnTrend,
+    filialReturnData,
+    driverReturnData,
     entregasPorFilial: filiais,
     entregasPorMotorista: motoristas,
     totalVolumes,
     entregasComOcorrencia,
     lastUpdated: new Date().toISOString(),
     periodDays,
+    isMock: true,
   };
 }
