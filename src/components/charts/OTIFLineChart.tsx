@@ -4,13 +4,14 @@ import { EChartsOption } from 'echarts';
 import { ChartCard } from '@/components/ui/ChartCard';
 
 interface OTIFLineChartProps {
-  data: Array<{ date: string; value: number }>;
+  data: Array<{ date: string; value: number | null }>;
   height?: number;
 }
 
 export function OTIFLineChart({ data, height = 320 }: OTIFLineChartProps) {
   const dates = data.map((d) => d.date);
-  const values = data.map((d) => d.value);
+  const chartValues = data.map((d) => d.value);
+  const values = chartValues.filter((value): value is number => value !== null);
   const minValue = values.length ? Math.min(...values) : 0;
   const maxValue = values.length ? Math.max(...values) : 0;
   const padding = (maxValue - minValue) * 0.15 || 1;
@@ -75,11 +76,32 @@ export function OTIFLineChart({ data, height = 320 }: OTIFLineChartProps) {
         return `<div class="font-medium text-slate-100">${p.name}</div><div class="mt-1 flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background:#0ea5e9"></span><span>Taxa de sucesso: <strong>${p.value}%</strong></span></div>`;
       },
     },
+    dataZoom:
+      dates.length > 10
+        ? [
+            {
+              type: 'inside',
+              xAxisIndex: 0,
+              zoomOnMouseWheel: true,
+              moveOnMouseMove: true,
+            },
+            {
+              type: 'slider',
+              xAxisIndex: 0,
+              height: 14,
+              bottom: 3,
+              borderColor: 'transparent',
+              fillerColor: 'rgba(14, 165, 233, 0.14)',
+              handleStyle: { color: '#0ea5e9', borderColor: '#0ea5e9' },
+              textStyle: { color: '#94a3b8' },
+            },
+          ]
+        : undefined,
     series: [
       {
         name: 'Taxa de sucesso',
         type: 'line',
-        data: values,
+        data: chartValues,
         smooth: true,
         symbol: 'circle',
         symbolSize: 6,

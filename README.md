@@ -24,8 +24,8 @@ flowchart TD
     end
 
     subgraph "3. Dashboards (Visualização)"
-        D & E -->|Google Visualization API (CSV)| G["dashboard.html<br/>(Web / Tempo Real)"]
-        D & E -->|gviz_csv| H["app.py (Streamlit)<br/>Multi-páginas"]
+        D & E -->|GET CSV via Web App| G["Next.js Dashboard<br/>(Vercel / ECharts)"]
+        D & E -->|CSV| H["app.py (Streamlit)<br/>Multi-páginas"]
     end
 ```
 
@@ -34,7 +34,8 @@ flowchart TD
 ## 📁 Estrutura de Arquivos
 
 ```text
-├── dashboard.html           # Dashboard interativo web (HTML/JS/Chart.js/Three.js) com sync Google Sheets
+├── src/app/page.tsx         # Dashboard web Next.js com gráficos ECharts e filtros interativos
+├── src/lib/data-service.ts  # Leitura e consolidação das abas Viagens e Pendencias
 ├── app.py                   # Roteador multipágina da aplicação Streamlit
 ├── comum.py                 # Funções compartilhadas (CSS, paleta, gráficos e regras logísticas)
 ├── paginas/
@@ -88,6 +89,27 @@ SHEETS_WEBAPP_TOKEN=seu_token_secreto
 
 ## 🚀 Como Usar
 
+### Dashboard web Next.js
+
+O dashboard principal usa os dados da pasta de trabalho configurada em `SHEETS_WEBAPP_URL`.
+As abas `Viagens` e `Pendencias` são lidas no servidor pelo Web App; abas ausentes ou vazias
+não geram gráficos vazios nem são substituídas por dados fictícios.
+
+1. Instale o Node.js 20.9+ e as dependências do projeto:
+   ```bash
+   npm install
+   ```
+2. Configure `SHEETS_WEBAPP_URL` no arquivo `.env` (ou nas variáveis do projeto na Vercel).
+3. Inicie o dashboard local:
+   ```bash
+   npm run dev
+   ```
+4. Abra `http://localhost:3000`.
+
+O período e a filial podem ser filtrados pela interface. Os gráficos ECharts oferecem zoom,
+restauração e exportação de imagem; o botão **Exportar CSV** baixa o consolidado de filiais
+correspondente ao filtro atual.
+
 ### Opção 1: Executar a Automação Completa (Robô RPA)
 
 Para rodar todo o fluxo de uma vez (baixar viagens do dia + baixar pendências de 90 dias + subir tudo para o Google Sheets):
@@ -102,25 +124,7 @@ Para rodar todo o fluxo de uma vez (baixar viagens do dia + baixar pendências d
 
 ---
 
-### Opção 2: Visualizar pelo `dashboard.html` (Recomendado)
-
-O [dashboard.html](file:///c:/Users/Antenor.Hugo/Downloads/retorno/dashboard.html) é um painel web independente, rápido e leve:
-
-1. Dê um duplo clique no arquivo `dashboard.html` para abri-lo no seu navegador.
-2. **Sincronização em Nuvem:**
-   - Ao abrir, ele carrega o histórico local e dispara automaticamente uma sincronização em segundo plano com o Google Sheets.
-   - Você também pode clicar no botão **"🔄 Sincronizar Google Sheets"** no canto superior direito para forçar a atualização imediata.
-3. **Filtros Interativos:**
-   - Filtre por **Filial**, **Data**, **Motorista**, **Região** e **Ocorrência**.
-   - Ao clicar nas barras do gráfico de **Ocorrências**, o dashboard filtra automaticamente por aquele motivo.
-4. **Exportação:**
-   - Botões para exportar as viagens e notas filtradas em **CSV**, além do botão **📷 Foto do Dashboard (PNG/PDF)** para relatórios gerenciais.
-5. **Backup Manual (Drag & Drop):**
-   - Caso precise analisar uma planilha pontual sem enviá-la para a nuvem, basta arrastá-la diretamente para a dropzone pontilhada.
-
----
-
-### Opção 3: Visualizar pelo Streamlit (`app.py`)
+### Opção 2: Visualizar pelo Streamlit (`app.py`)
 
 Se preferir a interface Python com tabelas interativas:
 

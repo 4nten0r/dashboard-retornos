@@ -4,58 +4,75 @@
 
 @layer base {
   :root {
-    --background: 248 250 252;
-    --foreground: 15 23 42;
+    --background: 234 240 246;
+    --foreground: 30 41 59;
+    --surface: 234 240 246;
   }
 
   * {
-    @apply border-slate-200;
+    @apply border-slate-200/80;
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    @apply min-h-screen text-slate-800 antialiased;
+    background:
+      radial-gradient(ellipse at 87% 4%, rgba(196, 224, 245, 0.48), transparent 30rem),
+      radial-gradient(ellipse at 8% 52%, rgba(255, 255, 255, 0.65), transparent 32rem),
+      #eaf0f6;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
   }
 }
 
 @layer components {
+  .neo-card {
+    background: linear-gradient(145deg, rgba(246, 249, 252, 0.94), rgba(231, 237, 244, 0.96));
+    box-shadow:
+      9px 9px 20px rgba(185, 197, 211, 0.52),
+      -9px -9px 20px rgba(255, 255, 255, 0.86);
+  }
+
+  .neo-card:hover {
+    box-shadow:
+      12px 12px 26px rgba(180, 193, 208, 0.55),
+      -12px -12px 26px rgba(255, 255, 255, 0.94);
+  }
+
+  .neo-kpi {
+    background: linear-gradient(145deg, #f5f8fc, #e6ecf3);
+    box-shadow:
+      7px 7px 16px rgba(185, 197, 211, 0.6),
+      -7px -7px 16px rgba(255, 255, 255, 0.9);
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+
+  .neo-kpi:hover,
+  .neo-kpi-active {
+    box-shadow:
+      inset 3px 3px 7px rgba(185, 197, 211, 0.45),
+      inset -3px -3px 7px rgba(255, 255, 255, 0.8),
+      0 12px 24px rgba(100, 116, 139, 0.12);
+  }
+
+  .neo-kpi-active {
+    border-color: rgba(14, 165, 233, 0.35);
+  }
+
   .card {
-    @apply bg-white rounded-xl border border-slate-200 shadow-card transition-shadow duration-200 hover:shadow-card-hover;
+    @apply rounded-2xl border border-white/80 bg-white/70 shadow-card transition-all duration-200;
   }
 
   .card-header {
-    @apply px-6 py-4 border-b border-slate-100;
+    @apply border-b border-slate-100/80 px-5 py-4;
   }
 
   .card-content {
-    @apply p-6;
-  }
-
-  .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
-  }
-
-  .btn-primary {
-    @apply btn bg-slate-900 text-white hover:bg-slate-800 focus:ring-slate-900;
-  }
-
-  .btn-secondary {
-    @apply btn bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 focus:ring-slate-500;
-  }
-
-  .input {
-    @apply w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-colors duration-200 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/20;
-  }
-
-  .select {
-    @apply input appearance-none bg-no-repeat bg-right pr-10;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.5rem center;
-    background-size: 1.5em 1.5em;
+    @apply p-5;
   }
 }
 
@@ -85,5 +102,20 @@
 
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .neo-kpi {
+    transform: none !important;
   }
 }

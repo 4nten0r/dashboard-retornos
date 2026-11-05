@@ -6,10 +6,25 @@ import { ChartCard } from '@/components/ui/ChartCard';
 interface FilialVolumeChartProps {
   data: Array<{ name: string; entregas: number; volumes: number }>;
   height?: number;
+  onSelectBranch?: (branch: string) => void;
 }
 
-export function FilialVolumeChart({ data, height = 320 }: FilialVolumeChartProps) {
+export function FilialVolumeChart({ data, height = 320, onSelectBranch }: FilialVolumeChartProps) {
   const top = [...data].sort((a, b) => b.entregas - a.entregas).slice(0, 10);
+  const onEvents = onSelectBranch
+    ? {
+        click: (params: unknown) => {
+          if (
+            typeof params === 'object' &&
+            params !== null &&
+            'name' in params &&
+            typeof params.name === 'string'
+          ) {
+            onSelectBranch(params.name);
+          }
+        },
+      }
+    : undefined;
 
   const option: EChartsOption = {
     grid: { top: 30, right: 20, bottom: 65, left: 55 },
@@ -38,6 +53,10 @@ export function FilialVolumeChart({ data, height = 320 }: FilialVolumeChartProps
         return `<div><strong>${item?.name || p.name}</strong><br/>Entregas: <strong>${item?.entregas?.toLocaleString('pt-BR') || 0}</strong><br/>Volumes: <strong>${item?.volumes?.toLocaleString('pt-BR') || 0}</strong></div>`;
       },
     },
+    dataZoom:
+      top.length > 6
+        ? [{ type: 'inside', xAxisIndex: 0, zoomOnMouseWheel: true, moveOnMouseMove: true }]
+        : undefined,
     series: [
       {
         name: 'Entregas',
@@ -58,6 +77,7 @@ export function FilialVolumeChart({ data, height = 320 }: FilialVolumeChartProps
           borderRadius: [4, 4, 0, 0],
         },
         barWidth: '50%',
+        cursor: 'pointer',
         label: {
           show: true,
           position: 'top',
@@ -70,5 +90,13 @@ export function FilialVolumeChart({ data, height = 320 }: FilialVolumeChartProps
     ],
   };
 
-  return <ChartCard title="Entregas por Filial" option={option} height={height} />;
+  return (
+    <ChartCard
+      title="Entregas por Filial"
+      subtitle="Clique em uma filial para filtrar os indicadores"
+      option={option}
+      height={height}
+      onEvents={onEvents}
+    />
+  );
 }

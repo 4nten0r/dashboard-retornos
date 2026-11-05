@@ -11,30 +11,47 @@ interface DashboardLayoutProps {
   title?: string;
   currentPeriod?: PeriodOption;
   onPeriodChange?: (period: PeriodOption) => void;
+  showPending?: boolean;
+  showOccurrences?: boolean;
 }
 
-export function DashboardLayout({ children, title = 'Dashboard', currentPeriod = '30d', onPeriodChange }: DashboardLayoutProps) {
+export function DashboardLayout({
+  children,
+  title = 'Dashboard',
+  currentPeriod = '30d',
+  onPeriodChange,
+  showPending = false,
+  showOccurrences = false,
+}: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Sidebar />
-      <div className={cn('transition-all duration-300', 'lg:pl-64')}>
+    <div className="min-h-screen bg-[#eaf0f6]">
+      <Sidebar
+        open={sidebarOpen}
+        showPending={showPending}
+        showOccurrences={showOccurrences}
+        onNavigate={() => setSidebarOpen(false)}
+      />
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Fechar navegação"
+        />
+      )}
+      <div className={cn('min-h-screen transition-all duration-300', 'lg:pl-64')}>
         <Topbar
           title={title}
           onMenuClick={() => setSidebarOpen(!sidebarOpen)}
           currentPeriod={currentPeriod}
           onPeriodChange={onPeriodChange || (() => {})}
         />
-        <main className="p-4 sm:p-6 lg:p-8">{children}</main>
+        <main id="dashboard-main" className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-9">
+          {children}
+        </main>
       </div>
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
-      )}
     </div>
   );
 }

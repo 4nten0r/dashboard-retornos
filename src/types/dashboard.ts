@@ -23,7 +23,7 @@ export interface ReturnReasonKPI {
 export interface ReturnTrendPoint {
   date: string;
   returns: number;
-  successRate: number;
+  successRate: number | null;
 }
 
 // Interface for filial return comparison

@@ -67,7 +67,12 @@ export function ReturnReasonsDoughnutChart({ data, height = 320 }: ReturnReasons
       },
     },
     tooltip: {
-      show: false,
+      trigger: 'item',
+      backgroundColor: '#0f172a',
+      borderColor: '#1e293b',
+      textStyle: { color: '#f8fafc', fontSize: 12 },
+      formatter: (params: any) =>
+        `<strong>${params.name}</strong><br/>${Number(params.value).toLocaleString('pt-BR')} notas · ${params.percent}%`,
     },
     series: [
       {

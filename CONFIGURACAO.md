@@ -10,10 +10,11 @@
                                                            │
                                                            ▼
 ┌─────────────────┐                            ┌──────────────────────┐
-│  Dashboards     │ ◀─── GET CSV (gviz/tq) ─── │  Google Sheets       │
-│ (index.html,    │     (leitura pública)      │  (abas: Viagens,     │
-│  Streamlit)     │                            │   Pendencias)        │
-└─────────────────┘                            └──────────────────────┘
+│  Dashboards     │ ◀─── GET CSV (Web App) ─── │  Google Sheets       │
+│ (Next.js,       │     (URL no .env)          │  (mesma pasta:       │
+│  Streamlit)     │                            │   Viagens,           │
+└─────────────────┘                            │   Pendencias)        │
+                                               └──────────────────────┘
 ```
 
 ---
@@ -22,9 +23,9 @@
 
 ### 1️⃣ Preparar a Planilha Google Sheets
 
-1. Acesse: https://docs.google.com/spreadsheets/d/1yrEfFEEa4rtNcYzkWMjGvFPPuHS5ihauzUeNXORE2M4/edit
-2. Certifique-se de que existam duas abas: **"Viagens"** e **"Pendencias"** (o Apps Script cria automaticamente se não existirem)
-3. Compartilhe a planilha: **Qualquer pessoa com o link → Leitor** (para leitura pública via gviz/tq)
+1. Abra a pasta de trabalho associada ao Web App configurado em `SHEETS_WEBAPP_URL`.
+2. Certifique-se de que as abas **"Viagens"** e **"Pendencias"** estejam nessa mesma pasta de trabalho.
+3. Implante o Web App para permitir leitura CSV; o token fica reservado para escrita.
 
 ### 2️⃣ Configurar e Implantar o Apps Script
 
@@ -52,15 +53,11 @@
 Edite o arquivo `.env` na raiz do projeto com a URL real do Web App:
 
 ```ini
-# Credenciais de acesso ao ERP Diaslog
-DIASLOG_USUARIO=antenorhpfiuza@gmail.com
-DIASLOG_SENHA=123456
-
 # URL do Web App implantado no passo 2 (COLE AQUI A URL REAL)
 SHEETS_WEBAPP_URL=https://script.google.com/macros/s/SEU_DEPLOY_ID_REAL/exec
 
-# Token DEVE SER IGUAL ao configurado no Apps Script (passo 2.5)
-SHEETS_WEBAPP_TOKEN=DIASPlus_2024_SecureToken_XYZ789
+# Token DEVE SER IGUAL ao configurado no Apps Script (necessário para os robôs de escrita)
+SHEETS_WEBAPP_TOKEN=seu_token_secreto
 ```
 
 ### 4️⃣ Instalar Dependências Python
@@ -72,23 +69,29 @@ playwright install
 
 ### 5️⃣ Testar a Integração
 
-#### Teste 1: Envio manual de viagens
+#### Teste 1: Leitura dos dados da planilha
+Abra `SHEETS_WEBAPP_URL?sheet=Viagens` e `SHEETS_WEBAPP_URL?sheet=Pendencias`; ambos devem retornar CSV.
+
+#### Teste 2: Envio manual de viagens
 ```bash
 py enviar_viagens.py
 ```
 Deve aparecer: `OK: X linhas x Y colunas escritas na aba "Viagens".`
 
-#### Teste 2: Rodar automação completa
+#### Teste 3: Rodar automação completa
 ```bash
 py executar_rotina.py
 ```
 Ou clique duas vezes em `executar_rotina.bat`
 
-#### Teste 3: Visualizar no Dashboard HTML
-- Dê duplo clique em `index.html`
-- Clique no botão **"🔄 Sincronizar Google Sheets"**
+#### Teste 4: Visualizar no Dashboard Next.js
+```bash
+npm install
+npm run dev
+```
+Abra `http://localhost:3000`. Configure `SHEETS_WEBAPP_URL` no `.env` antes de iniciar.
 
-#### Teste 4: Visualizar no Streamlit
+#### Teste 5: Visualizar no Streamlit
 ```bash
 streamlit run app.py
 ```
@@ -103,7 +106,7 @@ https://script.google.com/macros/s/<DEPLOY_ID>/exec?sheet=Viagens
 https://script.google.com/macros/s/<DEPLOY_ID>/exec?sheet=Pendencias
 ```
 - Retorna CSV puro (Content-Type: text/csv)
-- Usado pelo `index.html` via `gviz/tq` e pelo Streamlit via `pd.read_csv()`
+- Usado pelo dashboard Next.js (`src/lib/data-service.ts`) e pelo Streamlit
 
 ### POST — Escrita (Scripts Python)
 ```
@@ -138,13 +141,9 @@ Body: CSV data
 - Rode `configurarToken('seu_token')` novamente no Apps Script
 
 ### "Sheet not found" / Planilha vazia
-- Confirme que a Planilha ID no Apps Script (`1yrEfFEEa4rtNcYzkWMjGvFPPuHS5ihauzUeNXORE2M4`) está correta
-- Verifique se as abas "Viagens" e "Pendencias" existem
-- Teste leitura direta: `https://docs.google.com/spreadsheets/d/1yrEfFEEa4rtNcYzkWMjGvFPPuHS5ihauzUeNXORE2M4/gviz/tq?tqx=out:csv&sheet=Viagens`
-
-### Erro de CORS no dashboard HTML
-- O `gviz/tq` não tem CORS — funciona direto no navegador
-- Se der erro, verifique se a planilha está compartilhada como "Qualquer pessoa com o link → Leitor"
+- Confirme se `SHEETS_WEBAPP_URL` aponta para o Web App conectado à pasta de trabalho correta.
+- Verifique se as abas `Viagens` e `Pendencias` existem nessa mesma pasta.
+- Teste `SHEETS_WEBAPP_URL?sheet=Viagens` e `SHEETS_WEBAPP_URL?sheet=Pendencias`; ambas devem retornar CSV.
 
 ### Timeout / Erro 500 no Web App
 - Logs: No Apps Script → **Execuções** → veja os erros
@@ -170,7 +169,8 @@ Body: CSV data
 | `app.py` | Roteador Streamlit (páginas: Pendências / Entregas) |
 | `paginas/pendencias.py` | Dashboard Streamlit: análise de notas pendentes |
 | `paginas/entregas.py` | Dashboard Streamlit: performance de viagens |
-| `index.html` | Dashboard Web standalone (Chart.js, Three.js) |
+| `src/app/page.tsx` | Dashboard Next.js com gráficos ECharts e filtros |
+| `src/lib/data-service.ts` | Leitura e consolidação dos dados do Google Sheets |
 
 ---
 
@@ -188,19 +188,15 @@ Body: CSV data
 
 ## ✅ Checklist Final
 
-- [ ] Planilha Google Sheets acessível (ID: `1yrEfFEEa4rtNcYzkWMjGvFPPuHS5ihauzUeNXORE2M4`)
+- [ ] Web App conectado à pasta de trabalho com as abas `Viagens` e `Pendencias`
 - [ ] Apps Script implantado como Web App ("Qualquer pessoa")
 - [ ] Token configurado nas Propriedades do Script E no `.env`
 - [ ] URL do Web App colada no `.env` (`SHEETS_WEBAPP_URL`)
+- [ ] `npm run dev` abre o dashboard Next.js e carrega os dados
 - [ ] `py enviar_viagens.py` funciona (teste de escrita)
 - [ ] `py executar_rotina.py` roda sem erros
-- [ ] `index.html` abre e sincroniza (botão 🔄)
 - [ ] `streamlit run app.py` abre e mostra dados
 - [ ] Tarefa agendada no Windows (opcional)
-
----
-
-**📞 Suporte:** Em caso de dúvidas, verifique os logs no Apps Script (Execuções) e no terminal Python.
 
 ---
 
