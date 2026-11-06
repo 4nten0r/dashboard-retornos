@@ -110,8 +110,11 @@ PERIODOS = [
 # ── Pasta de saida ────────────────────────────────────────────────────────────
 PASTA_SAIDA = Path("outputs") / "pendencias" / HOJE.strftime("%Y-%m-%d")
 
-# ── True = sem janela (usar apos estavel); False = browser visivel (debug) ────
-HEADLESS = False
+# Defina DIASLOG_HEADLESS=1 para executar sem janela (ex.: Agendador do Windows).
+HEADLESS = os.environ.get("DIASLOG_HEADLESS", "").strip().lower() in {
+    "1", "true", "yes", "on",
+}
+BROWSER_CHANNEL = os.environ.get("DIASLOG_BROWSER_CHANNEL", "msedge").strip()
 
 # ── Status da Entrega: apenas estes ficam MARCADOS ───────────────────────────
 STATUS_MARCAR = {
@@ -405,8 +408,9 @@ def enviar_para_sheets(arquivo_consolidado: Path):
     import urllib.parse
 
     if not WEBAPP_URL or not WEBAPP_TOKEN:
-        log("AVISO: SHEETS_WEBAPP_URL/TOKEN nao definidos no .env. Upload ignorado.")
-        return
+        raise RuntimeError(
+            "SHEETS_WEBAPP_URL e SHEETS_WEBAPP_TOKEN devem estar configurados para enviar pendências."
+        )
 
     log("Preparando dados para o Google Sheets...")
     df = pd.read_excel(arquivo_consolidado, engine="openpyxl")
@@ -437,6 +441,8 @@ def enviar_para_sheets(arquivo_consolidado: Path):
     with urllib.request.urlopen(req, timeout=180) as resp:
         retorno = resp.read().decode("utf-8", errors="replace").strip()
     log(f"Resposta do Google Sheets: {retorno}")
+    if not retorno.startswith("OK:"):
+        raise RuntimeError(f"O Google Sheets rejeitou o envio de pendências: {retorno}")
 
 
 async def main():
@@ -451,7 +457,10 @@ async def main():
     arquivos_baixados: list[Path] = []
 
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(channel="msedge", headless=HEADLESS)
+        if BROWSER_CHANNEL:
+            browser = await pw.chromium.launch(channel=BROWSER_CHANNEL, headless=HEADLESS)
+        else:
+            browser = await pw.chromium.launch(headless=HEADLESS)
         ctx = await browser.new_context(accept_downloads=True)
         page = await ctx.new_page()
 
@@ -473,13 +482,13 @@ async def main():
         finally:
             await browser.close()
 
-    if len(arquivos_baixados) == 2:
-        consolidado = consolidar(arquivos_baixados)
-        try:
-            enviar_para_sheets(consolidado)
-        except Exception as e:
-            log(f"AVISO: falha ao enviar pendencias para o Google Sheets: {e}")
-            log("       O consolidado local foi salvo normalmente.")
+    if len(arquivos_baixados) != 2:
+        raise RuntimeError(
+            f"Esperava baixar 2 relatórios de pendências, mas baixou {len(arquivos_baixados)}."
+        )
+
+    consolidado = consolidar(arquivos_baixados)
+    enviar_para_sheets(consolidado)
 
     log("Concluido.")
 

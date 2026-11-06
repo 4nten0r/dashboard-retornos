@@ -1,0 +1,43 @@
+name: Daily data sync
+
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: diaslog-daily-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      DIASLOG_USUARIO: ${{ secrets.DIASLOG_USUARIO }}
+      DIASLOG_SENHA: ${{ secrets.DIASLOG_SENHA }}
+      SHEETS_WEBAPP_URL: ${{ secrets.SHEETS_WEBAPP_URL }}
+      SHEETS_WEBAPP_TOKEN: ${{ secrets.SHEETS_WEBAPP_TOKEN }}
+      DIASLOG_HEADLESS: "1"
+      DIASLOG_BROWSER_CHANNEL: ""
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install automation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pandas openpyxl xlrd playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Download reports and update Google Sheets
+        run: python executar_rotina.py

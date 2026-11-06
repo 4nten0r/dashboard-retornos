@@ -24,6 +24,7 @@ def log(msg: str):
 
 async def executar():
     inicio = time.time()
+    falhas = []
     log("=" * 60)
     log("🚀 INICIANDO ROTINA COMPLETA DE AUTOMAÇÃO - DIAS+")
     log("=" * 60)
@@ -34,8 +35,9 @@ async def executar():
         import baixar_viagens
         await baixar_viagens.main()
         log("✅ Viagens finalizadas com sucesso.")
-    except Exception as e:
+    except (Exception, SystemExit) as e:
         log(f"❌ Erro na rotina de Viagens: {e}")
+        falhas.append(("Viagens", e))
 
     log("-" * 60)
 
@@ -45,15 +47,21 @@ async def executar():
         import baixar_pendencias
         await baixar_pendencias.main()
         log("✅ Pendências finalizadas com sucesso.")
-    except Exception as e:
+    except (Exception, SystemExit) as e:
         log(f"❌ Erro na rotina de Pendências: {e}")
+        falhas.append(("Pendências", e))
 
     duracao = time.time() - inicio
     log("=" * 60)
-    log(f"🎉 ROTINA CONCLUÍDA EM {duracao:.1f}s")
+    if falhas:
+        log(f"❌ ROTINA CONCLUÍDA COM {len(falhas)} FALHA(S) EM {duracao:.1f}s")
+        for etapa, erro in falhas:
+            log(f"  - {etapa}: {erro}")
+        raise SystemExit(1)
+
+    log(f"🎉 ROTINA CONCLUÍDA COM SUCESSO EM {duracao:.1f}s")
     log("=" * 60)
 
 
 if __name__ == "__main__":
     asyncio.run(executar())
-

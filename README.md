@@ -102,7 +102,8 @@ não geram gráficos vazios nem são substituídas por dados fictícios.
    ```bash
    npm install
    ```
-2. Configure `SHEETS_WEBAPP_URL` no arquivo `.env` (ou nas variáveis do projeto na Vercel).
+2. Configure `SHEETS_WEBAPP_URL` no arquivo `.env` ou, na Vercel, em **Project → Settings → Environment Variables**. Na Vercel, crie a variável com esse nome exato, cole somente a URL do Web App (sem aspas e sem `=` extra) e marque os ambientes em que o dashboard será usado (**Production**, **Preview** e/ou **Development**).
+   > O dashboard consulta a planilha pela API do Next.js no servidor. Portanto, use `SHEETS_WEBAPP_URL` sem o prefixo `NEXT_PUBLIC_`; não é necessário expor essa URL ao navegador. O arquivo `.env` local não é enviado à Vercel. Depois de salvar ou alterar a variável, faça um novo deploy para que ela passe a valer.
 3. Inicie o dashboard local:
    ```bash
    npm run dev
@@ -141,19 +142,39 @@ O aplicativo abrirá no navegador padrão em `http://localhost:8501`, permitindo
 
 ---
 
-## ⏰ Como Agendar no Windows (Task Scheduler)
+## ⏰ Atualização diária na nuvem
 
-Para que o robô atualize o dashboard automaticamente todos os dias sem intervenção manual:
+O workflow [.github/workflows/daily-sync.yml](./.github/workflows/daily-sync.yml)
+executa os robôs no GitHub Actions todos os dias às **06:00 no horário de Brasília**
+(09:00 UTC). Ele baixa as viagens do dia anterior e as pendências dos últimos 90
+dias, atualiza as abas `Viagens` e `Pendencias` no Google Sheets e pode também ser
+executado manualmente em **Actions → Daily data sync → Run workflow**.
 
-1. Pressione `Win + R`, digite `taskschd.msc` e pressione Enter.
-2. Clique em **Criar Tarefa Básica**.
-3. Defina um nome (ex.: `Diaslog - Atualizacao Indicadores`).
+A Vercel hospeda o dashboard; a coleta roda no GitHub Actions, que inicia um
+ambiente Ubuntu com Chromium. Assim, não depende do seu computador nem exige um
+deploy diário da aplicação.
 
-4. Escolha o disparador (ex.: **Diariamente** às `06:00` e repetindo a cada 4 horas).
-5. Na ação, escolha **Iniciar um programa**:
-   - **Programa/script:** `C:\Users\Antenor.Hugo\Downloads\retorno\executar_rotina.bat`
-   - **Iniciar em (obrigatório):** `C:\Users\Antenor.Hugo\Downloads\retorno\`
-6. Salve a tarefa.
+### Configuração única
+
+1. Envie o workflow para a branch padrão do repositório e confirme que **Actions**
+   está habilitado no GitHub.
+2. No repositório, abra **Settings → Secrets and variables → Actions** e crie estes
+   *Repository secrets*:
+   - `DIASLOG_USUARIO`: usuário de acesso ao Diaslog.
+   - `DIASLOG_SENHA`: senha de acesso ao Diaslog.
+   - `SHEETS_WEBAPP_URL`: URL do Apps Script Web App.
+   - `SHEETS_WEBAPP_TOKEN`: token de escrita configurado nas propriedades do Apps Script.
+3. Execute **Actions → Daily data sync → Run workflow** para testar a primeira execução.
+   Confira o log da execução e as abas da planilha.
+
+O workflow lê o histórico de viagens existente na aba `Viagens` antes de atualizá-la,
+pois os ambientes do GitHub Actions são temporários e não guardam arquivos entre
+execuções. O dashboard busca os dados ao abrir e atualiza automaticamente a cada 30
+minutos, inclusive quando a página já está aberta. Se o Diaslog bloquear o acesso do
+runner do GitHub ou exigir CAPTCHA/validação interativa, a execução falhará e será
+necessário usar um runner em uma rede autorizada pelo Diaslog.
+
+Para executar manualmente no Windows, ainda é possível usar `executar_rotina.bat`.
 
 ---
 

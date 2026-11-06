@@ -174,15 +174,29 @@ Body: CSV data
 
 ---
 
-## ⏰ Agendamento Automático (Windows Task Scheduler)
+## ⏰ Agendamento na nuvem (GitHub Actions)
 
-1. `Win + R` → `taskschd.msc`
-2. **Criar Tarefa Básica** → Nome: "Dias+ Atualização Indicadores"
-3. Disparador: **Diariamente** às 06:00 (repete a cada 4h)
-4. Ação: **Iniciar programa**
-   - Programa: `C:\Users\Antenor.Hugo\Downloads\retorno\executar_rotina.bat`
-   - Iniciar em: `C:\Users\Antenor.Hugo\Downloads\retorno\`
-5. Concluir
+O workflow `.github/workflows/daily-sync.yml` executa diariamente às 06:00 no
+horário de Brasília (09:00 UTC), baixa viagens do dia anterior e pendências dos
+últimos 90 dias e envia os resultados para o Google Sheets. O dashboard da Vercel
+consulta a planilha, portanto não precisa de um deploy diário. Nenhum computador
+local precisa ficar ligado.
+
+1. Envie o workflow para a branch padrão do repositório e habilite **Actions**.
+2. No GitHub, abra **Settings → Secrets and variables → Actions** e crie estes
+   *Repository secrets*: `DIASLOG_USUARIO`, `DIASLOG_SENHA`,
+   `SHEETS_WEBAPP_URL` e `SHEETS_WEBAPP_TOKEN`. Use os mesmos valores configurados
+   localmente; o token deve corresponder às propriedades do Apps Script.
+3. Em **Actions → Daily data sync**, escolha **Run workflow** para fazer a primeira
+   execução e verificar os logs e as abas da planilha.
+
+O workflow usa Chromium em um runner Ubuntu temporário. Como o ambiente não mantém
+arquivos entre execuções, o histórico de viagens é lido da aba `Viagens` antes da
+atualização. O dashboard busca os dados ao abrir e atualiza automaticamente a cada
+30 minutos. Se o Diaslog bloquear o runner do GitHub ou exigir CAPTCHA/validação
+interativa, será necessário usar um runner hospedado em uma rede autorizada.
+
+Para rodar manualmente em Windows, pode-se continuar usando `executar_rotina.bat`.
 
 ---
 
@@ -191,7 +205,9 @@ Body: CSV data
 - [ ] Web App conectado à pasta de trabalho com as abas `Viagens` e `Pendencias`
 - [ ] Apps Script implantado como Web App ("Qualquer pessoa")
 - [ ] Token configurado nas Propriedades do Script E no `.env`
+- [ ] Secrets `DIASLOG_USUARIO`, `DIASLOG_SENHA`, `SHEETS_WEBAPP_URL` e `SHEETS_WEBAPP_TOKEN` configurados no GitHub Actions
 - [ ] URL do Web App colada no `.env` (`SHEETS_WEBAPP_URL`)
+- [ ] Workflow `Daily data sync` executado com sucesso no GitHub Actions
 - [ ] `npm run dev` abre o dashboard Next.js e carrega os dados
 - [ ] `py enviar_viagens.py` funciona (teste de escrita)
 - [ ] `py executar_rotina.py` roda sem erros

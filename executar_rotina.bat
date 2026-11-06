@@ -5,14 +5,17 @@ echo  Iniciando Automacao da Central de Indicadores Dias+
 echo ======================================================
 
 cd /d "%~dp0"
+if errorlevel 1 exit /b 1
 
-py executar_rotina.py
+set "DIASLOG_HEADLESS=1"
+if not exist "%~dp0outputs" mkdir "%~dp0outputs"
+py executar_rotina.py >> "%~dp0outputs\rotina_diaria.log" 2>&1
+set "EXIT_CODE=%ERRORLEVEL%"
 
-if %ERRORLEVEL% NEQ 0 (
+if not "%EXIT_CODE%"=="0" (
     echo [ERRO] A execucao encontrou falhas.
 ) else (
     echo [SUCESSO] Rotina concluida com sucesso.
 )
 
-pause
-
+exit /b %EXIT_CODE%

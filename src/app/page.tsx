@@ -31,6 +31,8 @@ import { OcorrenciasTable } from '@/components/ui/OcorrenciasTable';
 import type { DashboardMetrics } from '@/lib/data-service';
 import type { PeriodOption } from '@/types/dashboard';
 
+const METRICS_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
+
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -123,6 +125,14 @@ export default function DashboardPage() {
     return () => {
       requestId.current += 1;
     };
+  }, [fetchMetrics]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(
+      () => void fetchMetrics(true),
+      METRICS_REFRESH_INTERVAL_MS
+    );
+    return () => window.clearInterval(intervalId);
   }, [fetchMetrics]);
 
   const totalDeliveries =

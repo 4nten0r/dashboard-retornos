@@ -21,7 +21,7 @@ import asyncio
 import io
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 # Garante saida UTF-8 no terminal Windows
@@ -85,8 +85,11 @@ WEBAPP_TOKEN = os.environ.get("SHEETS_WEBAPP_TOKEN", "")
 HOJE = datetime.today() - timedelta(days=1)  # Dia anterior (automação alimenta com dados do dia anterior)
 PASTA_SAIDA = Path("outputs") / "viagens" / HOJE.strftime("%Y-%m-%d")
 
-# ── True = sem janela (usar apos estavel); False = browser visivel (debug) ────
-HEADLESS = False
+# Defina DIASLOG_HEADLESS=1 para executar sem janela (ex.: Agendador do Windows).
+HEADLESS = os.environ.get("DIASLOG_HEADLESS", "").strip().lower() in {
+    "1", "true", "yes", "on",
+}
+BROWSER_CHANNEL = os.environ.get("DIASLOG_BROWSER_CHANNEL", "msedge").strip()
 
 
 def log(msg: str):
@@ -242,11 +245,66 @@ def _detectar_header_viagens(arq: Path) -> int:
     return 7
 
 
+def _filtrar_historico_viagens(
+    frame: pd.DataFrame, data_limite: date, data_fim: date
+) -> pd.DataFrame:
+    if frame.empty:
+        return frame
+    if "Data Entrega" not in frame or "Motorista" not in frame:
+        raise RuntimeError("O historico de viagens precisa das colunas Data Entrega e Motorista.")
+
+    frame = frame.drop(columns=["Atualizado em", *VIAGENS_DESCARTAR], errors="ignore").copy()
+    delivery_dates = pd.to_datetime(frame["Data Entrega"], errors="coerce")
+    valid_dates = delivery_dates.notna()
+    valid_dates &= delivery_dates.dt.date >= data_limite
+    valid_dates &= delivery_dates.dt.date <= data_fim
+    frame = frame.loc[valid_dates].copy()
+    delivery_dates = delivery_dates.loc[valid_dates]
+    frame = frame[frame["Motorista"].fillna("").astype(str).str.strip().ne("")]
+    delivery_dates = delivery_dates.loc[frame.index]
+    frame["Data Entrega"] = delivery_dates.dt.strftime("%Y-%m-%d")
+
+    for column in frame.select_dtypes(include=["datetime", "datetimetz"]).columns:
+        frame[column] = frame[column].dt.strftime("%Y-%m-%d")
+    return frame
+
+
+def _carregar_historico_planilha() -> pd.DataFrame:
+    import urllib.parse
+    import urllib.request
+
+    url = WEBAPP_URL + "?" + urllib.parse.urlencode({"sheet": VIAGENS_ABA})
+    request = urllib.request.Request(url, headers={"Accept": "text/csv,text/plain;q=0.9"})
+    with urllib.request.urlopen(request, timeout=60) as response:
+        csv_text = response.read().decode("utf-8-sig")
+
+    if not csv_text.strip():
+        log("A aba Viagens ainda esta vazia; o historico sera iniciado com o relatorio de hoje.")
+        return pd.DataFrame()
+    if csv_text.lstrip().startswith("<") or csv_text.lstrip().lower().startswith(("erro", "sheet ")):
+        raise RuntimeError("O Web App nao retornou CSV valido para a aba Viagens.")
+
+    frame = pd.read_csv(io.StringIO(csv_text), dtype=str, keep_default_na=False)
+    if frame.empty:
+        return frame
+    if "Data Entrega" not in frame or "Motorista" not in frame:
+        raise RuntimeError("A aba Viagens da planilha nao contem as colunas obrigatorias.")
+    log(f"Historico lido da planilha: {len(frame)} linha(s).")
+    return frame
+
+
 def carregar_historico_viagens() -> pd.DataFrame:
-    """Consolida os arquivos diarios locais, usando somente a data da pasta."""
+    """Usa a planilha como historico persistente e inclui relatorios locais disponiveis."""
     pasta_historico = Path(__file__).resolve().parent / "outputs" / "viagens"
     data_limite = (HOJE - timedelta(days=HISTORICO_DIAS - 1)).date()
+    data_fim = HOJE.date()
     frames = []
+    planilha = _carregar_historico_planilha()
+    if not planilha.empty:
+        historico_planilha = _filtrar_historico_viagens(planilha, data_limite, data_fim)
+        if not historico_planilha.empty:
+            frames.append(historico_planilha)
+
     arquivos_lidos = 0
 
     for arquivo in sorted(pasta_historico.glob("*/resumo_viagens_*.xlsx")):
@@ -254,7 +312,7 @@ def carregar_historico_viagens() -> pd.DataFrame:
             data_relatorio = datetime.strptime(arquivo.parent.name, "%Y-%m-%d").date()
         except ValueError:
             continue
-        if not data_limite <= data_relatorio <= HOJE.date():
+        if not data_limite <= data_relatorio <= data_fim:
             continue
 
         header = _detectar_header_viagens(arquivo)
@@ -264,18 +322,17 @@ def carregar_historico_viagens() -> pd.DataFrame:
 
         delivery_dates = pd.to_datetime(frame["Data Entrega"], errors="coerce")
         frame = frame.loc[delivery_dates.dt.date == data_relatorio].copy()
-        frame = frame[frame["Motorista"].notna()]
-        frame = frame.drop(columns=[column for column in VIAGENS_DESCARTAR if column in frame])
+        frame = _filtrar_historico_viagens(frame, data_limite, data_fim)
         if not frame.empty:
             frames.append(frame)
             arquivos_lidos += 1
 
     if not frames:
-        raise RuntimeError("Nenhum relatorio diario com dados foi encontrado no historico.")
+        raise RuntimeError("Nenhum relatorio de viagens com dados foi encontrado.")
 
     historico = pd.concat(frames, ignore_index=True, sort=False).drop_duplicates()
     log(
-        f"Historico de viagens: {arquivos_lidos} arquivo(s), "
+        f"Historico de viagens: planilha + {arquivos_lidos} arquivo(s) local(is), "
         f"{len(historico)} linha(s), {historico['Data Entrega'].nunique()} data(s)."
     )
     return historico
@@ -287,8 +344,9 @@ def enviar_viagens_para_sheets():
     import urllib.parse
 
     if not WEBAPP_URL or not WEBAPP_TOKEN:
-        log("AVISO: SHEETS_WEBAPP_URL/TOKEN nao definidos. Upload de viagens ignorado.")
-        return
+        raise RuntimeError(
+            "SHEETS_WEBAPP_URL e SHEETS_WEBAPP_TOKEN devem estar configurados para enviar viagens."
+        )
 
     df = carregar_historico_viagens()
 
@@ -305,7 +363,10 @@ def enviar_viagens_para_sheets():
                                  headers={"Content-Type": "text/csv; charset=utf-8"})
     log(f"Enviando {len(df)} linhas de viagens ao Web App (aba '{VIAGENS_ABA}')...")
     with urllib.request.urlopen(req, timeout=180) as resp:
-        log(f"Resposta (viagens): {resp.read().decode('utf-8', errors='replace').strip()}")
+        retorno = resp.read().decode("utf-8", errors="replace").strip()
+    log(f"Resposta (viagens): {retorno}")
+    if not retorno.startswith("OK:"):
+        raise RuntimeError(f"O Google Sheets rejeitou o envio de viagens: {retorno}")
 
 
 async def main():
@@ -318,7 +379,10 @@ async def main():
     arquivo_viagens: Path | None = None
 
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(channel="msedge", headless=HEADLESS)
+        if BROWSER_CHANNEL:
+            browser = await pw.chromium.launch(channel=BROWSER_CHANNEL, headless=HEADLESS)
+        else:
+            browser = await pw.chromium.launch(headless=HEADLESS)
         ctx = await browser.new_context(accept_downloads=True)
         page = await ctx.new_page()
 
@@ -336,12 +400,10 @@ async def main():
         finally:
             await browser.close()
 
-    if arquivo_viagens is not None:
-        try:
-            enviar_viagens_para_sheets()
-        except Exception as e:
-            log(f"AVISO: falha ao enviar viagens para o Google Sheets: {e}")
-            log("       O arquivo local foi salvo normalmente.")
+    if arquivo_viagens is None:
+        raise RuntimeError("O relatório de viagens não foi baixado.")
+
+    enviar_viagens_para_sheets()
 
     log("Concluido.")
 
