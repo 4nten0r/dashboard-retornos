@@ -99,10 +99,30 @@ def log(msg: str):
 async def fazer_login(page):
     log("Acessando pagina de login...")
     await page.goto(URL_LOGIN, wait_until="domcontentloaded", timeout=60_000)
-    await page.locator(
-        "input[type='text'], input[name*='user' i], input[id*='user' i], input[id*='login' i]"
-    ).first.fill(USUARIO)
-    await page.locator("input[type='password']").first.fill(SENHA)
+    campo_usuario = page.locator(
+        "input#txtusername, input[name='txtusername'], "
+        "input[autocomplete='username'], input[type='text']:visible"
+    ).first
+    campo_senha = page.locator(
+        "input#txtpass, input[name='txtpass'], "
+        "input[autocomplete='current-password'], input[type='password']:visible"
+    ).first
+    try:
+        await campo_usuario.wait_for(state="visible", timeout=60_000)
+        await campo_senha.wait_for(state="visible", timeout=10_000)
+    except PWTimeout as error:
+        titulo = await page.title()
+        campos = await page.locator("input:visible").evaluate_all(
+            "(items) => items.map((item) => "
+            "`${item.type || 'sem tipo'}:${item.id || item.name || 'sem identificador'}`).join(', ')"
+        )
+        raise RuntimeError(
+            "A pagina do Diaslog nao apresentou os campos de login. "
+            f"URL final: {page.url}; titulo: {titulo!r}; campos visiveis: {campos or 'nenhum'}."
+        ) from error
+
+    await campo_usuario.fill(USUARIO)
+    await campo_senha.fill(SENHA)
     await page.locator("a:has-text('Entrar'), input[type='submit'], button[type='submit']").first.click()
     await page.wait_for_load_state("domcontentloaded", timeout=60_000)
     log("Login realizado.")
