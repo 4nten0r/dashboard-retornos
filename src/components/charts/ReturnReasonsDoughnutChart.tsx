@@ -31,29 +31,41 @@ export function ReturnReasonsDoughnutChart({ data, height = 320 }: ReturnReasons
   }));
 
   const total = sortedData.reduce((sum, d) => sum + d.value, 0);
+  const totalLabel = total.toLocaleString('pt-BR');
+  const centerFontSize = totalLabel.length > 5 ? 20 : totalLabel.length > 3 ? 24 : 30;
 
   const option: EChartsOption = {
     color: COLORS,
     legend: {
       show: true,
+      type: 'scroll',
       orient: 'vertical',
-      right: 4,
-      top: 'center',
-      width: '42%',
-      itemWidth: 10,
-      itemHeight: 10,
-      itemGap: 10,
+      right: 0,
+      top: 8,
+      bottom: 8,
+      width: '46%',
+      itemWidth: 8,
+      itemHeight: 8,
+      itemGap: 8,
       textStyle: {
         color: '#334155',
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: 500,
         padding: [0, 0, 0, 8],
         overflow: 'truncate',
         ellipsis: '…',
       },
+      pageButtonItemGap: 4,
+      pageIconColor: '#0f766e',
+      pageIconInactiveColor: '#cbd5e1',
+      pageTextStyle: { color: '#64748b', fontSize: 10 },
       formatter: (name: string) => {
         const item = sortedData.find((d) => d.name === name);
-        return item ? `${name} (${item.percentage}%)` : name;
+        const label = name.length > 22 ? `${name.slice(0, 21)}…` : name;
+        const percentage = item?.percentage.toLocaleString('pt-BR', {
+          maximumFractionDigits: 1,
+        });
+        return item ? `${label} (${percentage}%)` : label;
       },
       tooltip: {
         show: true,
@@ -81,8 +93,8 @@ export function ReturnReasonsDoughnutChart({ data, height = 320 }: ReturnReasons
       {
         name: 'Ocorrências',
         type: 'pie',
-        radius: ['40%', '56%'],
-        center: ['30%', '50%'],
+        radius: ['35%', '47%'],
+        center: ['25%', '50%'],
         avoidLabelOverlap: true,
         padAngle: 4,
         itemStyle: {
@@ -104,11 +116,11 @@ export function ReturnReasonsDoughnutChart({ data, height = 320 }: ReturnReasons
     ],
     graphic: {
       type: 'text',
-      left: '30%',
+      left: '25%',
       top: 'center',
       style: {
-        text: `${total.toLocaleString()}`,
-        font: 'bold 36px Inter, system-ui',
+        text: totalLabel,
+        font: `bold ${centerFontSize}px Inter, system-ui`,
         fill: '#0f172a',
         align: 'center',
         verticalAlign: 'middle',

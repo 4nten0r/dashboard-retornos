@@ -137,7 +137,7 @@ function getSheetUrl(sheetName: string): string {
   return url.toString();
 }
 
-async function fetchSheet(sheetName: string, forceRefresh: boolean): Promise<CsvSheet> {
+async function fetchSheet(sheetName: string): Promise<CsvSheet> {
   const url = getSheetUrl(sheetName);
   let lastError: Error | undefined;
 
@@ -149,7 +149,7 @@ async function fetchSheet(sheetName: string, forceRefresh: boolean): Promise<Csv
       const response = await fetch(url, {
         headers: { Accept: 'text/csv,text/plain;q=0.9,*/*;q=0.8' },
         signal: controller.signal,
-        next: { revalidate: forceRefresh ? 0 : 60 },
+        cache: 'no-store',
       });
       if (response.status === 404) {
         throw new SheetUnavailableError(`A aba "${sheetName}" não foi encontrada.`);
@@ -277,12 +277,11 @@ function getEntityReturnData(
 
 export async function getDashboardMetrics(
   periodDays: number,
-  forceRefresh = false,
   selectedBranch: string | null = null
 ): Promise<DashboardMetrics> {
   const [travelSheet, pendingSheet] = await Promise.all([
-    fetchSheet('Viagens', forceRefresh),
-    fetchSheet('Pendencias', forceRefresh).catch((error: unknown) => {
+    fetchSheet('Viagens'),
+    fetchSheet('Pendencias').catch((error: unknown) => {
       if (error instanceof SheetUnavailableError) return null;
       throw error;
     }),

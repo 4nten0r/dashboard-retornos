@@ -10,6 +10,7 @@ interface ReturnTrendChartProps {
 }
 
 export function ReturnTrendChart({ data, height = 340 }: ReturnTrendChartProps) {
+  const daysWithSuccessData = data.filter((point) => point.successRate !== null).length;
   const option: EChartsOption = {
     grid: { top: 35, right: 55, bottom: 60, left: 50 },
     legend: {
@@ -60,7 +61,20 @@ export function ReturnTrendChart({ data, height = 340 }: ReturnTrendChartProps) 
         yAxisIndex: 1,
         data: data.map((point) => point.successRate),
         smooth: true,
-        symbolSize: 5,
+        connectNulls: true,
+        symbol: 'circle',
+        symbolSize: daysWithSuccessData === 1 ? 12 : 5,
+        label:
+          daysWithSuccessData === 1
+            ? {
+                show: true,
+                position: 'top',
+                color: '#0369a1',
+                fontSize: 11,
+                fontWeight: 700,
+                formatter: ({ value }) => `${Number(value).toFixed(1)}%`,
+              }
+            : { show: false },
         itemStyle: { color: '#0284c7' },
         lineStyle: { color: '#0284c7', width: 2 },
       },
@@ -70,7 +84,11 @@ export function ReturnTrendChart({ data, height = 340 }: ReturnTrendChartProps) 
   return (
     <ChartCard
       title="Evolução de retornos e sucesso"
-      subtitle="Volume de retornos e taxa diária de sucesso."
+      subtitle={
+        daysWithSuccessData === 1
+          ? 'Retornos no período; a taxa de sucesso está disponível para 1 dia.'
+          : 'Volume de retornos e taxa diária de sucesso.'
+      }
       option={option}
       height={height}
     />

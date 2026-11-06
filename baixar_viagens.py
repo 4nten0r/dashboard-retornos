@@ -10,6 +10,8 @@ Passos (conforme operacao):
 Saida : outputs/viagens/AAAA-MM-DD/resumo_viagens_AAAAMMDD.xlsx
 Upload: aba "Viagens" do Google Sheet (via mesmo Apps Script Web App do
         baixar_pendencias.py), sem colunas Ajudante/Setores (PF/desorganizado).
+        Mantem no Sheet o historico dos relatorios diarios locais dos ultimos
+        365 dias para alimentar os graficos de tendencia.
 
 Uso:
     py baixar_viagens.py
@@ -69,6 +71,7 @@ URL_VIAGENS = "https://sistema.diaslog.com.br/restrito/Relatorio_ResumoViagens.a
 # Resumo de Viagens: aba do Sheet e colunas que NAO sobem (ajudante=PF; setores=baguncado)
 VIAGENS_ABA       = "Viagens"
 VIAGENS_DESCARTAR = ["Ajudante", "Setores"]
+HISTORICO_DIAS    = 365
 
 # ── Google Sheets (upload automatico) ──────────────────────────────────────────
 # Upload via Apps Script Web App (sem Google Cloud / sem service account).
@@ -239,7 +242,46 @@ def _detectar_header_viagens(arq: Path) -> int:
     return 7
 
 
-def enviar_viagens_para_sheets(arquivo: Path):
+def carregar_historico_viagens() -> pd.DataFrame:
+    """Consolida os arquivos diarios locais, usando somente a data da pasta."""
+    pasta_historico = Path(__file__).resolve().parent / "outputs" / "viagens"
+    data_limite = (HOJE - timedelta(days=HISTORICO_DIAS - 1)).date()
+    frames = []
+    arquivos_lidos = 0
+
+    for arquivo in sorted(pasta_historico.glob("*/resumo_viagens_*.xlsx")):
+        try:
+            data_relatorio = datetime.strptime(arquivo.parent.name, "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        if not data_limite <= data_relatorio <= HOJE.date():
+            continue
+
+        header = _detectar_header_viagens(arquivo)
+        frame = pd.read_excel(arquivo, engine="openpyxl", header=header).dropna(how="all")
+        if "Data Entrega" not in frame or "Motorista" not in frame:
+            raise RuntimeError(f"Colunas obrigatorias ausentes em {arquivo.name}.")
+
+        delivery_dates = pd.to_datetime(frame["Data Entrega"], errors="coerce")
+        frame = frame.loc[delivery_dates.dt.date == data_relatorio].copy()
+        frame = frame[frame["Motorista"].notna()]
+        frame = frame.drop(columns=[column for column in VIAGENS_DESCARTAR if column in frame])
+        if not frame.empty:
+            frames.append(frame)
+            arquivos_lidos += 1
+
+    if not frames:
+        raise RuntimeError("Nenhum relatorio diario com dados foi encontrado no historico.")
+
+    historico = pd.concat(frames, ignore_index=True, sort=False).drop_duplicates()
+    log(
+        f"Historico de viagens: {arquivos_lidos} arquivo(s), "
+        f"{len(historico)} linha(s), {historico['Data Entrega'].nunique()} data(s)."
+    )
+    return historico
+
+
+def enviar_viagens_para_sheets():
     """Envia o Resumo de Viagens para a aba 'Viagens' do Sheet (Apps Script Web App)."""
     import urllib.request
     import urllib.parse
@@ -248,17 +290,13 @@ def enviar_viagens_para_sheets(arquivo: Path):
         log("AVISO: SHEETS_WEBAPP_URL/TOKEN nao definidos. Upload de viagens ignorado.")
         return
 
-    hdr = _detectar_header_viagens(arquivo)
-    df = pd.read_excel(arquivo, engine="openpyxl", header=hdr).dropna(how="all")
-    df = df[df["Motorista"].notna()].copy()
-    df = df.drop(columns=[c for c in VIAGENS_DESCARTAR if c in df.columns])
+    df = carregar_historico_viagens()
 
     for col in df.columns:
         if pd.api.types.is_datetime64_any_dtype(df[col]):
             df[col] = df[col].dt.strftime("%Y-%m-%d")
     df = df.where(pd.notna(df), "")
-    ts = datetime.fromtimestamp(arquivo.stat().st_mtime)
-    df["Atualizado em"] = ts.strftime("%d/%m/%Y %H:%M")
+    df["Atualizado em"] = datetime.now().strftime("%d/%m/%Y %H:%M")
 
     csv_bytes = df.to_csv(index=False).encode("utf-8")
     url = WEBAPP_URL + "?" + urllib.parse.urlencode(
@@ -300,7 +338,7 @@ async def main():
 
     if arquivo_viagens is not None:
         try:
-            enviar_viagens_para_sheets(arquivo_viagens)
+            enviar_viagens_para_sheets()
         except Exception as e:
             log(f"AVISO: falha ao enviar viagens para o Google Sheets: {e}")
             log("       O arquivo local foi salvo normalmente.")

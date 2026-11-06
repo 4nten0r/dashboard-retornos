@@ -96,7 +96,6 @@ export default function DashboardPage() {
       try {
         const searchParams = new URLSearchParams({ period: currentPeriod });
         if (selectedBranch) searchParams.set('branch', selectedBranch);
-        if (manualRefresh) searchParams.set('refresh', 'true');
         const response = await fetch(`/api/metrics?${searchParams}`, { cache: 'no-store' });
         if (!response.ok) throw new Error('Não foi possível consultar os dados da planilha.');
         const data: DashboardMetrics = await response.json();

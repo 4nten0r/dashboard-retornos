@@ -9,9 +9,12 @@ interface OTIFLineChartProps {
 }
 
 export function OTIFLineChart({ data, height = 320 }: OTIFLineChartProps) {
-  const dates = data.map((d) => d.date);
-  const chartValues = data.map((d) => d.value);
-  const values = chartValues.filter((value): value is number => value !== null);
+  const points = data.filter(
+    (point): point is { date: string; value: number } => point.value !== null
+  );
+  const dates = data.map((point) => point.date);
+  const chartValues = data.map((point) => point.value);
+  const values = points.map((point) => point.value);
   const minValue = values.length ? Math.min(...values) : 0;
   const maxValue = values.length ? Math.max(...values) : 0;
   const padding = (maxValue - minValue) * 0.15 || 1;
@@ -104,8 +107,20 @@ export function OTIFLineChart({ data, height = 320 }: OTIFLineChartProps) {
         type: 'line',
         data: chartValues,
         smooth: true,
+        connectNulls: true,
         symbol: 'circle',
-        symbolSize: 6,
+        symbolSize: points.length === 1 ? 12 : 6,
+        label:
+          points.length === 1
+            ? {
+                show: true,
+                position: 'top',
+                color: '#0369a1',
+                fontSize: 12,
+                fontWeight: 700,
+                formatter: ({ value }) => `${Number(value).toFixed(1)}%`,
+              }
+            : { show: false },
         lineStyle: {
           color: '#0ea5e9',
           width: 3,
@@ -143,7 +158,11 @@ export function OTIFLineChart({ data, height = 320 }: OTIFLineChartProps) {
   return (
     <ChartCard
       title="Evolução da taxa de entregas concluídas"
-      subtitle="Percentual de viagens concluídas por dia."
+      subtitle={
+        points.length === 1
+          ? 'Taxa do único dia com dados; ainda não há histórico diário no período.'
+          : 'Percentual de viagens concluídas por dia.'
+      }
       option={option}
       height={height}
     />

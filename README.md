@@ -29,6 +29,9 @@ flowchart TD
     end
 ```
 
+Os relatórios diários locais de viagens são consolidados na aba `Viagens` nos últimos 365 dias
+disponíveis, preservando a série histórica para os gráficos de desempenho.
+
 ---
 
 ## 📁 Estrutura de Arquivos

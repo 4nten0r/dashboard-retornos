@@ -13,7 +13,6 @@ const periodMap: Record<string, number> = {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const rawPeriod = searchParams.get('period') || '30d';
-  const forceRefresh = searchParams.get('refresh') === 'true';
   const selectedBranch = searchParams.get('branch')?.trim() || null;
 
   let periodDays = periodMap[rawPeriod];
@@ -30,9 +29,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const metrics = await getDashboardMetrics(periodDays, forceRefresh, selectedBranch);
+    const metrics = await getDashboardMetrics(periodDays, selectedBranch);
     return NextResponse.json(metrics, {
-      headers: { 'Cache-Control': forceRefresh ? 'no-store' : 'private, max-age=60' },
+      headers: { 'Cache-Control': 'private, no-store' },
     });
   } catch (error) {
     console.error('Erro na API de métricas:', error);
