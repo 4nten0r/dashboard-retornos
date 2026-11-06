@@ -98,13 +98,13 @@ def log(msg: str):
 
 async def fazer_login(page):
     log("Acessando pagina de login...")
-    await page.goto(URL_LOGIN, wait_until="networkidle", timeout=30_000)
+    await page.goto(URL_LOGIN, wait_until="domcontentloaded", timeout=60_000)
     await page.locator(
         "input[type='text'], input[name*='user' i], input[id*='user' i], input[id*='login' i]"
     ).first.fill(USUARIO)
     await page.locator("input[type='password']").first.fill(SENHA)
     await page.locator("a:has-text('Entrar'), input[type='submit'], button[type='submit']").first.click()
-    await page.wait_for_load_state("networkidle", timeout=30_000)
+    await page.wait_for_load_state("domcontentloaded", timeout=60_000)
     log("Login realizado.")
 
 
@@ -135,7 +135,7 @@ async def baixar_resumo_viagens(page, ctx) -> Path | None:
     """
     hoje = HOJE.strftime("%d/%m/%Y")
     log(f"--- Resumo de Viagens: {hoje} ---")
-    await page.goto(URL_VIAGENS, wait_until="networkidle", timeout=30_000)
+    await page.goto(URL_VIAGENS, wait_until="domcontentloaded", timeout=60_000)
 
     # 1) Datas inicial e final = hoje (primeiros 2 campos de texto visiveis)
     inputs = await page.locator("input[type='text']:visible").all()

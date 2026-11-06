@@ -176,13 +176,13 @@ def corresponde(texto: str, conjunto: set) -> bool:
 
 async def fazer_login(page):
     log("Acessando pagina de login...")
-    await page.goto(URL_LOGIN, wait_until="networkidle", timeout=30_000)
+    await page.goto(URL_LOGIN, wait_until="domcontentloaded", timeout=60_000)
     await page.locator(
         "input[type='text'], input[name*='user' i], input[id*='user' i], input[id*='login' i]"
     ).first.fill(USUARIO)
     await page.locator("input[type='password']").first.fill(SENHA)
     await page.locator("a:has-text('Entrar'), input[type='submit'], button[type='submit']").first.click()
-    await page.wait_for_load_state("networkidle", timeout=30_000)
+    await page.wait_for_load_state("domcontentloaded", timeout=60_000)
     log("Login realizado.")
 
 
@@ -351,7 +351,7 @@ async def baixar_periodo(page, periodo: dict) -> Path:
     data_fim = periodo["fim"].strftime("%d/%m/%Y")
 
     log(f"--- {label}: {data_ini} ate {data_fim} ---")
-    await page.goto(URL_RELATORIO, wait_until="networkidle", timeout=30_000)
+    await page.goto(URL_RELATORIO, wait_until="domcontentloaded", timeout=60_000)
 
     await preencher_datas(page, data_ini, data_fim)
     await selecionar_todos_listboxes(page)
